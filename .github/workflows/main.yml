@@ -1,12 +1,11 @@
-name: Terraform CI
+name: Terraform CI/CD
 
 on:
   # Allows you to run this workflow manually from the Actions tab in GitHub.
-  # The 'public_key' input has been removed as requested.
   workflow_dispatch:
-    # inputs: # Removed public_key input
 
   # This will now trigger both the 'terraform' (plan) and 'apply' jobs on every push to the main branch.
+  # For production, consider removing 'push' trigger for 'apply' job and using manual approval steps.
   push:
     branches:
       - main
@@ -19,44 +18,39 @@ env:
 
 jobs:
   # This job will perform Terraform initialization, validation, and planning.
-  # It runs on both 'push' and 'workflow_dispatch' events.
   terraform:
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
-        # Assuming your Terraform files are in a subdirectory named 'cicdtf'
-        working-directory: cicdtf
+        working-directory: cicdtf # Your Terraform files are here
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Show current working directory (initial)
-        run: pwd
-
-      - name: List repository root contents
-        run: ls -la ${{ github.workspace }}
 
       - name: Verify AWS Environment Variables
         run: |
           echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+set}"
           echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:+set}"
           echo "AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
-          # Exit if AWS credentials are not set, as they are required for Terraform
           if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
             echo "::error::Missing AWS credentials."
             exit 1
           fi
 
       - name: Setup Terraform
-        # Uses the official HashiCorp action to set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7 # Specify the exact Terraform version you need
+          terraform_version: 1.5.7
 
-      - name: List working directory contents (inside cicdtf)
-        run: ls -la .
+      # Create the public key file from GitHub Secret for Terraform to read
+      - name: Create Public Key File
+        run: |
+          echo "${{ secrets.TF_PUBLIC_KEY_CONTENT }}" > public_key_from_secret.pub
+          chmod 600 public_key_from_secret.pub
+          ls -la public_key_from_secret.pub # Verify file creation
+        working-directory: cicdtf # Ensure this runs in the Terraform working directory
 
       - name: Terraform Init
         # Initializes Terraform, configuring the backend for state management
@@ -69,7 +63,6 @@ jobs:
 
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'
-        # The 'public_key' variable passing has been removed.
         run: terraform plan -out=planfile
 
       - name: Upload Planfile and Lock File
@@ -84,14 +77,12 @@ jobs:
           retention-days: 1 # Retain artifact for 1 day
 
   # This job will now automatically apply the Terraform plan on 'push' to 'main'
-  # as well as when manually dispatched.
   apply:
     needs: terraform # Ensures 'apply' runs only after 'terraform' job completes successfully
-    # The 'if' condition has been removed to allow auto-apply on push events.
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash # Explicitly set shell to bash for consistency
+        shell: bash
         working-directory: cicdtf
 
     steps:
@@ -103,15 +94,19 @@ jobs:
         with:
           terraform_version: 1.5.7
 
+      # Create the public key file from GitHub Secret for Terraform to read in the apply job too
+      - name: Create Public Key File
+        run: |
+          echo "${{ secrets.TF_PUBLIC_KEY_CONTENT }}" > public_key_from_secret.pub
+          chmod 600 public_key_from_secret.pub
+        working-directory: cicdtf
+
       - name: Download Planfile and Lock File
         # Downloads both the planfile and the .terraform.lock.hcl file
         uses: actions/download-artifact@v4
         with:
           name: terraform-artifacts-${{ github.run_id }} # Use the same artifact name
           path: cicdtf # Download to the working directory
-
-      - name: List working directory contents (after download)
-        run: ls -la .
 
       - name: Terraform Init (in Apply Job)
         # Re-initializes Terraform in the apply job to ensure consistency with the downloaded lock file.
@@ -120,5 +115,4 @@ jobs:
 
       - name: Terraform Apply
         # Applies the infrastructure changes based on the downloaded planfile.
-        # The 'public_key' variable passing has been removed.
         run: terraform apply -input=false planfile
