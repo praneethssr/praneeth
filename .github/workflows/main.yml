@@ -116,6 +116,6 @@ jobs:
         run: ls -la .
 
       - name: Terraform Apply
-        # Applies the infrastructure changes based on the downloaded planfile
-        # The 'public_key' variable is passed again, as it might be needed for the apply operation
-        run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
+        # Applies the infrastructure changes based on the downloaded planfile.
+        # The '-var' flag is removed here because the planfile already contains the variable values.
+        run: terraform apply -input=false planfile
