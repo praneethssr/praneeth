@@ -77,7 +77,16 @@ jobs:
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'.
         # Pass the public_key as a variable.
-        run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}"
+        # Capture stderr to see potential errors from plan command.
+        run: |
+          terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}" 2> terraform_plan_errors.log || true
+          if [ -s terraform_plan_errors.log ]; then
+            echo "::error::Terraform Plan encountered errors. See terraform_plan_errors.log for details."
+            cat terraform_plan_errors.log
+            exit 1
+          else
+            echo "Terraform Plan executed successfully."
+          fi
 
       - name: Upload Planfile
         uses: actions/upload-artifact@v4 # Uploads the generated planfile as a workflow artifact
@@ -105,6 +114,10 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
+
+      # Explicit Terraform Init before plan/apply/destroy in chained jobs
+      - name: Terraform Init (for Apply job)
+        run: terraform init -backend-config="tfstate.config" -migrate-state
 
       - name: Download Planfile
         uses: actions/download-artifact@v4 # Downloads the planfile artifact
@@ -140,13 +153,13 @@ jobs:
         with:
           terraform_version: 1.5.7
 
+      # Explicit Terraform Init before plan/apply/destroy in chained jobs
+      - name: Terraform Init (for Destroy job)
+        run: terraform init -backend-config="tfstate.config" -migrate-state
+
       # DEBUGGING STEP: List contents of the working directory
       - name: List working directory contents (inside cicdtf)
         run: ls -la .
-
-      - name: Terraform Init
-        # Initializes Terraform backend for the destroy command.
-        run: terraform init -backend-config="tfstate.config" -migrate-state
 
       - name: Terraform Destroy
         # Destroys all resources managed by the Terraform configuration.
