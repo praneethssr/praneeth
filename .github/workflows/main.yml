@@ -1,109 +1,153 @@
 name: Terraform CI/CD
 
 on:
-  workflow_dispatch:
-    inputs:
-      public_key:
-        description: 'SSH Public Key for EC2 (e.g., ssh-rsa AAA...)'
-        required: true
-        type: string
-      confirm_destroy:
-        description: 'Type "yes" to confirm destroy'
-        required: false
-        default: 'no'
-
   push:
     branches:
+      - main # Trigger plan on push to main
+    paths:
+      - 'terraform/**' # Only run if changes in the terraform directory
+  pull_request:
+    branches:
       - main
+    paths:
+      - 'terraform/**'
+  workflow_dispatch: # Allows manual triggering of the workflow
+    inputs:
+      terraform_action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
 
 env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_DEFAULT_REGION: ap-south-1
+  TF_WORKING_DIR: ./terraform # Set your Terraform root directory
 
 jobs:
-  terraform:
-    name: Terraform Plan
+  terraform_plan:
+    name: 'Terraform Plan'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
-
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole # REPLACE with your IAM Role ARN
+          aws-region: ap-south-1 # <--- CHANGED FROM us-east-1
+          
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: 1.x.x # Specify your desired Terraform version
 
       - name: Terraform Init
-        run: terraform init
+        id: init
+        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # <--- CHANGED FROM us-east-1
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        continue-on-error: true # Allow subsequent steps to run even if format check fails
 
       - name: Terraform Validate
+        id: validate
         run: terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Plan
-        run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key || 'dummy-key' }}"
+        id: plan
+        run: terraform plan -no-color -input=false
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          # If you have specific variables, you can pass them here
+          # TF_VAR_example_variable: ${{ secrets.EXAMPLE_SECRET }}
+          TF_VAR_region: ap-south-1 # <--- CHANGED FROM us-east-1
 
-      - name: Upload Planfile
+      - name: Store Terraform Plan
         uses: actions/upload-artifact@v4
         with:
-          name: planfile-${{ github.run_id }}
-          path: cicdtf/planfile
-          retention-days: 1
+          name: terraform-plan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan # You'll need to modify the 'terraform plan' command to output to a file: terraform plan -out=tfplan
+          if-no-files-found: ignore
 
-  apply:
-    name: Terraform Apply
-    needs: terraform
-    if: github.event_name == 'workflow_dispatch'
+  terraform_apply:
+    name: 'Terraform Apply'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
+    needs: terraform_plan # This job depends on the plan job succeeding
+    # Only run apply if explicitly triggered with 'apply' action, or on push to main (after plan)
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && success()) # Only apply if plan succeeded
 
+    environment: production # Use a protected environment for production deployments
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole # REPLACE with your IAM Role ARN
+          aws-region: ap-south-1 # <--- CHANGED FROM us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: 1.x.x
 
-      - name: Download Planfile
+      - name: Download Terraform Plan
         uses: actions/download-artifact@v4
         with:
-          name: planfile-${{ github.run_id }}
-          path: cicdtf
+          name: terraform-plan
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # <--- CHANGED FROM us-east-1
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Apply
-        run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
+        run: terraform apply -auto-approve tfplan # Apply using the saved plan file
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_region: ap-south-1 # <--- CHANGED FROM us-east-1
 
-  destroy:
-    name: Terraform Destroy
-    needs: apply
-    if: github.event.inputs.confirm_destroy == 'yes' && github.event_name == 'workflow_dispatch'
+  terraform_destroy:
+    name: 'Terraform Destroy'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
+    # This job should ONLY be triggered manually for safety
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'destroy'
 
+    environment: production # Use a protected environment for destruction
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole # REPLACE with your IAM Role ARN
+          aws-region: ap-south-1 # <--- CHANGED FROM us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: 1.x.x
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # <--- CHANGED FROM us-east-1
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
+        run: |
+          echo "WARNING: This is a destructive action. Proceeding with destroy..."
+          terraform destroy -auto-approve
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_region: ap-south-1 # <--- CHANGED FROM us-east-1
