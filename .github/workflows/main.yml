@@ -148,7 +148,7 @@ jobs:
         # Initializes Terraform for the destroy operation
         run: terraform init -backend-config="tfstate.config" -migrate-state
 
-      - name: Terraform Destroy
-        # Destroys the infrastructure. '--auto-approve' bypasses confirmation.
-        # Ensure 'public_key' is passed if your destroy configuration relies on it.
-        run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
+      # - name: Terraform Destroy
+      #   # Destroys the infrastructure. '--auto-approve' bypasses confirmation.
+      #   # Ensure 'public_key' is passed if your destroy configuration relies on it.
+      #   run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
