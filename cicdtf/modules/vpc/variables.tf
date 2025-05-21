@@ -11,6 +11,14 @@ variable "public_key" {
   # }
 }
 
+# Declaring the aws_region variable for use in provider.tf
+variable "aws_region" {
+  description = "The AWS region to deploy resources into."
+  type        = string
+  # You can set a default value here, or ensure it's always passed via CI/CD.
+  default     = "ap-south-1"
+}
+
 # Define other variables your configuration might need, e.g., for VPC, EC2 instance type, etc.
 # Example:
 # variable "vpc_cidr_block" {
