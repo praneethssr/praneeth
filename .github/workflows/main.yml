@@ -1,110 +1,83 @@
 name: Terraform CI
 
 on:
-  workflow_dispatch: # Allows manual triggering of the workflow
+  workflow_dispatch:
     inputs:
       public_key:
         description: 'SSH Public Key for EC2 Key Pair (e.g., ssh-rsa AAAA...)'
         required: true
         type: string
+
   push:
     branches:
-      - main # Triggers on pushes to the 'main' branch
+      - main
 
 env:
-  # CRITICAL: These secret names MUST EXACTLY MATCH the names you have configured
-  # in your GitHub repository's Settings -> Secrets and variables -> Actions.
-  # For example, if your secret is named 'MY_AWS_ACCESS_KEY_ID', then use ${{ secrets.MY_AWS_ACCESS_KEY_ID }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }} # <--- VERIFY THIS NAME IN GITHUB SECRETS
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # <--- VERIFY THIS NAME IN GITHUB SECRETS
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_DEFAULT_REGION: ap-south-1
 
 jobs:
   terraform:
-    runs-on: ubuntu-latest # Specifies the runner environment
+    runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash # Uses bash for all run commands in this job
-        # CRITICAL: This 'working-directory' MUST match your repository structure.
-        # Based on your previous screenshot, your Terraform files are in 'cicdtf'.
+        shell: bash
         working-directory: cicdtf
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3 # Checks out your repository code into the runner's workspace
+        uses: actions/checkout@v3
 
-      # DEBUGGING STEP: Show current working directory (initial)
       - name: Show current working directory (initial)
         run: pwd
 
-      # DEBUGGING STEP: List repository root contents
       - name: List repository root contents
         run: ls -la ${{ github.workspace }}
 
-      # DEBUGGING STEP: Verify AWS Environment Variables are set
-      # This step is crucial for diagnosing the secret issue.
-      # It will confirm if the variables are present in the shell environment (without printing values).
       - name: Verify AWS Environment Variables
         run: |
-          echo "Checking AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+set}"
-          echo "Checking AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:+set}"
-          echo "Checking AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
+          echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+set}"
+          echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:+set}"
+          echo "AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
           if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "::error::AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY is not set. Please check your GitHub Secrets."
-            exit 1 # Exit the job if secrets are not found
+            echo "::error::Missing AWS credentials."
+            exit 1
           fi
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3 # Sets up Terraform CLI on the runner
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7 # Specifies the Terraform version to use
+          terraform_version: 1.5.7
 
-      # DEBUGGING STEP: This will list the contents of the 'working-directory' (now 'cicdtf')
       - name: List working directory contents (inside cicdtf)
         run: ls -la .
 
       - name: Terraform Init
-        # Initializes Terraform backend and modules.
-        # -backend-config="tfstate.config": Uses the specified file for backend configuration.
-        # -migrate-state: Migrates state if the backend configuration changes.
         run: terraform init -backend-config="tfstate.config" -migrate-state
 
       - name: Terraform Validate
-        # Validates the Terraform configuration files for syntax and consistency.
-        # Removed -var flag as it's not supported by terraform validate.
         run: terraform validate
 
       - name: Terraform Plan
-        # Generates an execution plan and saves it to 'planfile'.
-        # Pass the public_key as a variable.
-        # Capture stderr to see potential errors from plan command.
-        run: |
-          terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}" 2> terraform_plan_errors.log || true
-          if [ -s terraform_plan_errors.log ]; then
-            echo "::error::Terraform Plan encountered errors. See terraform_plan_errors.log for details."
-            cat terraform_plan_errors.log
-            exit 1
-          else
-            echo "Terraform Plan executed successfully."
-          fi
+        run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}"
 
       - name: Upload Planfile
-        uses: actions/upload-artifact@v4 # Uploads the generated planfile as a workflow artifact
-        if: success() # Only upload if previous steps succeeded
+        uses: actions/upload-artifact@v4
+        if: success()
         with:
-          # Changed artifact name to include run ID for uniqueness
           name: planfile-${{ github.run_id }}
-          path: planfile # Path is relative to the 'working-directory' ('cicdtf')
-          retention-days: 1 # Keep artifact for 1 day for testing, adjust as needed
+          path: cicdtf/planfile
+          retention-days: 1
 
   apply:
-    needs: terraform # This job will only run after the 'terraform' job completes successfully
+    needs: terraform
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # REMOVED: if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
         shell: bash
-        working-directory: cicdtf # Must match the directory containing your .tf files
+        working-directory: cicdtf
 
     steps:
       - name: Checkout code
@@ -115,34 +88,25 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # Explicit Terraform Init before plan/apply/destroy in chained jobs
-      - name: Terraform Init (for Apply job)
-        run: terraform init -backend-config="tfstate.config" -migrate-state
-
       - name: Download Planfile
-        uses: actions/download-artifact@v4 # Downloads the planfile artifact
+        uses: actions/download-artifact@v4
         with:
-          # Changed artifact name to match the upload step's unique name
           name: planfile-${{ github.run_id }}
-          path: cicdtf # Downloads the artifact into the 'cicdtf' directory
-          run-id: ${{ github.run_id }} # Explicitly specify the current workflow run ID
+          path: cicdtf
 
-      # DEBUGGING STEP: List contents of the working directory after download
       - name: List working directory contents (after download)
         run: ls -la .
 
       - name: Terraform Apply
-        # Applies the saved planfile.
-        # Pass the public_key as a variable during apply as well.
         run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
 
   destroy:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # REMOVED: if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
         shell: bash
-        working-directory: cicdtf # Must match the directory containing your .tf files
+        working-directory: cicdtf
 
     steps:
       - name: Checkout code
@@ -153,16 +117,11 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # Explicit Terraform Init before plan/apply/destroy in chained jobs
-      - name: Terraform Init (for Destroy job)
-        run: terraform init -backend-config="tfstate.config" -migrate-state
-
-      # DEBUGGING STEP: List contents of the working directory
       - name: List working directory contents (inside cicdtf)
         run: ls -la .
 
+      - name: Terraform Init
+        run: terraform init -backend-config="tfstate.config" -migrate-state
+
       - name: Terraform Destroy
-        # Destroys all resources managed by the Terraform configuration.
-        # Pass the public_key as a variable during destroy as well.
         run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
-        
