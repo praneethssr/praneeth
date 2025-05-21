@@ -18,57 +18,70 @@ jobs:
     defaults:
       run:
         shell: bash # Uses bash for all run commands in this job
-        # IMPORTANT: Ensure this 'infra' directory exists at the root of your repository
-        # and contains your Terraform (.tf) files and 'tfstate.config'.
-        # If your .tf files are in the repository root, change this to '.'
+        # CRITICAL: This 'working-directory' MUST match your repository structure.
+        # If your Terraform files are in a folder named 'infra' at the root of your repo,
+        # then 'working-directory: infra' is correct.
+        # If your Terraform files are directly in the root of your repo,
+        # you MUST change this to 'working-directory: .' for ALL jobs.
         working-directory: infra
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3 # Checks out your repository code
+        uses: actions/checkout@v3 # Checks out your repository code into the runner's workspace
+
+      # --- NEW DEBUGGING STEPS ---
+      - name: Show current working directory (initial)
+        run: pwd # Prints the current path, which should be /home/runner/work/praneeth/praneeth
+
+      - name: List repository root contents
+        # This step runs BEFORE the 'working-directory' default takes effect for the job's steps.
+        # It will show if the 'infra' directory exists directly under your repository root.
+        run: ls -la ${{ github.workspace }}
+      # --- END NEW DEBUGGING STEPS ---
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3 # Sets up Terraform CLI
+        uses: hashicorp/setup-terraform@v3 # Sets up Terraform CLI on the runner
         with:
           terraform_version: 1.5.7 # Specifies the Terraform version to use
 
-      # Added for debugging: List contents of the working directory
-      - name: List working directory contents
+      # DEBUGGING STEP: This will list the contents of the 'working-directory' (e.g., 'infra')
+      # This step will only run if the 'working-directory' itself is found.
+      - name: List working directory contents (inside infra)
         run: ls -la .
 
       - name: Terraform Init
         # Initializes Terraform backend and modules.
         # -backend-config="tfstate.config": Uses the specified file for backend configuration.
-        # -migrate-state: Migrates state if the backend configuration changes.
+        # -migrate-state: Migrates state if the backend configuration changes (useful for initial setup).
         run: terraform init -backend-config="tfstate.config" -migrate-state
 
       - name: Terraform Validate
-        # Validates the Terraform configuration files.
+        # Validates the Terraform configuration files for syntax and consistency.
         run: terraform validate
 
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'.
+        # The 'planfile' will be created directly within the 'working-directory' (i.e., 'infra').
         run: terraform plan -out=planfile
 
       - name: Upload Planfile
-        uses: actions/upload-artifact@v4 # Uploads the generated planfile as an artifact
+        uses: actions/upload-artifact@v4 # Uploads the generated planfile as a workflow artifact
         with:
-          name: planfile # Name of the artifact
-          # Path to the planfile relative to the working-directory.
-          # If working-directory is 'infra', then 'infra/planfile' becomes 'infra/infra/planfile' which is wrong.
-          # It should just be 'planfile' if working-directory is 'infra'.
-          # Corrected path assuming 'working-directory: infra'
+          name: planfile # Name of the artifact for easy identification
+          # The 'path' is relative to the 'working-directory'.
+          # Since 'planfile' was created in 'infra' (our working-directory),
+          # we just need to specify 'planfile' here.
           path: planfile
 
   apply:
-    needs: terraform # This job depends on the 'terraform' job completing successfully
+    needs: terraform # This job will only run after the 'terraform' job completes successfully
     runs-on: ubuntu-latest
-    # This job only runs if manually triggered via workflow_dispatch
+    # This job is configured to run ONLY when the workflow is manually triggered (workflow_dispatch)
     if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
         shell: bash
-        # IMPORTANT: Ensure this 'infra' directory exists at the root of your repository
+        # CRITICAL: Ensure this 'infra' directory exists at the root of your repository.
         # If your .tf files are in the repository root, change this to '.'
         working-directory: infra
 
@@ -82,31 +95,33 @@ jobs:
           terraform_version: 1.5.7
 
       - name: Download Planfile
-        uses: actions/download-artifact@v4 # Downloads the planfile artifact
+        uses: actions/download-artifact@v4 # Downloads the planfile artifact from the 'terraform' job
         with:
-          name: planfile # Name of the artifact to download
-          # Path where the artifact should be downloaded.
-          # If working-directory is 'infra', downloading to 'infra' means it will be at 'infra/planfile'.
-          # This is correct for the 'terraform apply' step.
+          name: planfile # Specifies the name of the artifact to download
+          # The 'path' here is where the downloaded artifact will be placed.
+          # We want it in our current 'working-directory' ('infra'), so we specify 'infra'.
+          # This will result in the planfile being at 'your-repo/infra/planfile'.
           path: infra
 
-      # Added for debugging: List contents of the working directory after download
+      # DEBUGGING STEP: This will list the contents of the 'working-directory' (e.g., 'infra')
+      # after the planfile has been downloaded. Verify 'planfile' is listed.
       - name: List working directory contents (after download)
         run: ls -la .
 
       - name: Terraform Apply
         # Applies the saved planfile.
-        # -input=false: Prevents Terraform from prompting for input.
+        # -input=false: Prevents Terraform from prompting for input during apply.
+        # 'planfile' is directly accessible because it's in the 'working-directory'.
         run: terraform apply -input=false planfile
 
   destroy:
     runs-on: ubuntu-latest
-    # This job only runs if manually triggered via workflow_dispatch
+    # This job is configured to run ONLY when the workflow is manually triggered (workflow_dispatch)
     if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
         shell: bash
-        # IMPORTANT: Ensure this 'infra' directory exists at the root of your repository
+        # CRITICAL: Ensure this 'infra' directory exists at the root of your repository.
         # If your .tf files are in the repository root, change this to '.'
         working-directory: infra
 
@@ -119,8 +134,9 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # Added for debugging: List contents of the working directory
-      - name: List working directory contents
+      # DEBUGGING STEP: This will list the contents of the 'working-directory' (e.g., 'infra')
+      # Check the workflow logs for this step to verify your Terraform files are present.
+      - name: List working directory contents (inside infra)
         run: ls -la .
 
       - name: Terraform Init
