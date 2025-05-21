@@ -1,45 +1,129 @@
 name: Terraform CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: 'SSH Public Key for EC2 Key Pair (e.g., ssh-rsa AAAA...)'
+        required: true
+        type: string
+
   push:
     branches:
-      - main # or your default branch
+      - main
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ap-south-1
 
 jobs:
-  apply:
+  terraform:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: cicdtf
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
+      - name: Show current working directory (initial)
+        run: pwd
+
+      - name: List repository root contents
+        run: ls -la ${{ github.workspace }}
+
+      - name: Verify AWS Environment Variables
+        run: |
+          echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+set}"
+          echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:+set}"
+          echo "AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Missing AWS credentials."
+            exit 1
+          fi
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.x.x # Specify your desired Terraform version
+          terraform_version: 1.5.7
+
+      - name: List working directory contents (inside cicdtf)
+        run: ls -la .
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config="tfstate.config" -migrate-state
+
+      - name: Terraform Validate
+        run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}"
 
-      - name: Terraform Apply
-        run: terraform apply tfplan -auto-approve
+      - name: Upload Planfile
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: planfile-${{ github.run_id }}
+          path: cicdtf/planfile
+          retention-days: 1
 
-  destroy:
+  apply:
+    needs: terraform
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    needs: apply # This ensures the 'destroy' job runs only after 'apply' completes successfully
+    defaults:
+      run:
+        shell: bash
+        working-directory: cicdtf
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.x.x # Specify your desired Terraform version
+          terraform_version: 1.5.7
+
+      - name: Download Planfile
+        uses: actions/download-artifact@v4
+        with:
+          name: planfile-${{ github.run_id }}
+          path: cicdtf
+
+      - name: List working directory contents (after download)
+        run: ls -la .
+
+      - name: Terraform Apply
+        # It's important to pass the variable again for apply if it's used in the config
+        run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
+
+  destroy:
+    needs: apply # <--- Add this line to make destroy dependent on apply
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: cicdtf
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: List working directory contents (inside cicdtf)
+        run: ls -la .
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config="tfstate.config" -migrate-state
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+        # Ensure public_key is passed for destroy if your destroy configuration relies on it.
+        run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
