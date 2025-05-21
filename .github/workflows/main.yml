@@ -88,7 +88,7 @@ jobs:
   apply:
     needs: terraform # This job will only run after the 'terraform' job completes successfully
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' # Runs only if manually triggered
+    # REMOVED: if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
         shell: bash
@@ -120,7 +120,7 @@ jobs:
 
   destroy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' # Runs only if manually triggered
+    # REMOVED: if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
         shell: bash
