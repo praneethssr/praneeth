@@ -81,9 +81,11 @@ jobs:
 
       - name: Upload Planfile
         uses: actions/upload-artifact@v4 # Uploads the generated planfile as a workflow artifact
+        if: success() # Only upload if previous steps succeeded
         with:
           name: planfile # Name of the artifact for easy identification
           path: planfile # Path is relative to the 'working-directory' ('cicdtf')
+          retention-days: 1 # Keep artifact for 1 day for testing, adjust as needed
 
   apply:
     needs: terraform # This job will only run after the 'terraform' job completes successfully
