@@ -83,7 +83,8 @@ jobs:
         uses: actions/upload-artifact@v4 # Uploads the generated planfile as a workflow artifact
         if: success() # Only upload if previous steps succeeded
         with:
-          name: planfile # Name of the artifact for easy identification
+          # Changed artifact name to include run ID for uniqueness
+          name: planfile-${{ github.run_id }}
           path: planfile # Path is relative to the 'working-directory' ('cicdtf')
           retention-days: 1 # Keep artifact for 1 day for testing, adjust as needed
 
@@ -108,7 +109,8 @@ jobs:
       - name: Download Planfile
         uses: actions/download-artifact@v4 # Downloads the planfile artifact
         with:
-          name: planfile
+          # Changed artifact name to match the upload step's unique name
+          name: planfile-${{ github.run_id }}
           path: cicdtf # Downloads the artifact into the 'cicdtf' directory
           run-id: ${{ github.run_id }} # Explicitly specify the current workflow run ID
 
