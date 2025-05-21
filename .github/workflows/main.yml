@@ -1,14 +1,10 @@
 name: Terraform CI
 
 on:
-  # Allows you to run this workflow manually from the Actions tab in GitHub
-  # The 'public_key' input is still available if you need to manually trigger for specific scenarios.
+  # Allows you to run this workflow manually from the Actions tab in GitHub.
+  # The 'public_key' input has been removed as requested.
   workflow_dispatch:
-    inputs:
-      public_key:
-        description: 'SSH Public Key for EC2 Key Pair (e.g., ssh-rsa AAAA...)'
-        required: true
-        type: string
+    # inputs: # Removed public_key input
 
   # This will now trigger both the 'terraform' (plan) and 'apply' jobs on every push to the main branch.
   push:
@@ -73,8 +69,8 @@ jobs:
 
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'
-        # The 'public_key' input from workflow_dispatch is passed as a variable
-        run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}"
+        # The 'public_key' variable passing has been removed.
+        run: terraform plan -out=planfile
 
       - name: Upload Planfile and Lock File
         # Uploads both the generated planfile and the .terraform.lock.hcl file
@@ -117,7 +113,12 @@ jobs:
       - name: List working directory contents (after download)
         run: ls -la .
 
+      - name: Terraform Init (in Apply Job)
+        # Re-initializes Terraform in the apply job to ensure consistency with the downloaded lock file.
+        # -reconfigure forces Terraform to forget any previous configuration and re-read it.
+        run: terraform init -reconfigure -backend-config="tfstate.config" -migrate-state
+
       - name: Terraform Apply
         # Applies the infrastructure changes based on the downloaded planfile.
-        # The '-var' flag is removed here because the planfile already contains the variable values.
-        run: terraform apply -input=true planfile
+        # The 'public_key' variable passing has been removed.
+        run: terraform apply -input=false planfile
