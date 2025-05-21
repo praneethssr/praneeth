@@ -23,6 +23,11 @@ on:
           - apply
           - destroy
 
+# Add the permissions block here at the top level of the workflow
+permissions:
+  id-token: write # Required for OIDC authentication with AWS
+  contents: read  # Allows checkout of repository code
+
 env:
   TF_WORKING_DIR: ./terraform # Set your Terraform root directory
 
@@ -39,6 +44,8 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole # REPLACE with your IAM Role ARN
           aws-region: ap-south-1 
+          # audience: sts.amazonaws.com # This line is not typically needed and can sometimes cause issues.
+                                       # The default audience is usually sufficient. Let's remove it for now.
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
