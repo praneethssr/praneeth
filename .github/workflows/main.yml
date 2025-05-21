@@ -110,6 +110,7 @@ jobs:
         with:
           name: planfile
           path: cicdtf # Downloads the artifact into the 'cicdtf' directory
+          run-id: ${{ github.run_id }} # Explicitly specify the current workflow run ID
 
       # DEBUGGING STEP: List contents of the working directory after download
       - name: List working directory contents (after download)
