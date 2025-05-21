@@ -47,3 +47,15 @@ variable "vpc_cidr" {
   type        = string
   default     = "10.0.0.0/16"  # or whatever CIDR you want
 }
+# cicdtf/variables.tf
+
+variable "public_key" {
+  description = "The SSH public key content for the EC2 Key Pair."
+  type        = string
+  # You can add a validation rule here if you want to ensure it's a valid SSH key format.
+  # For example:
+  # validation {
+  #   condition     = can(regex("^ssh-(rsa|ed25519|dss|ecdsa) AAAA[0-9A-Za-z+/]+[=]{0,2}( .*|$)", var.public_key))
+  #   error_message = "The public_key must be a valid SSH public key string."
+  # }
+}
