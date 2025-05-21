@@ -12,6 +12,7 @@ variable "public_key" {
 }
 
 # Declaring the aws_region variable for use in provider.tf
+# This block is essential for the 'region = var.aws_region' line in provider.tf
 variable "aws_region" {
   description = "The AWS region to deploy resources into."
   type        = string
