@@ -165,3 +165,4 @@ jobs:
         # Destroys all resources managed by the Terraform configuration.
         # Pass the public_key as a variable during destroy as well.
         run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
+        
