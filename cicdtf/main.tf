@@ -1,9 +1,7 @@
 # cicdtf/main.tf
 
-# Configure the AWS provider
-provider "aws" {
-  region = var.aws_region # Assuming you define 'aws_region' in variables.tf or pass it
-}
+# The AWS provider configuration has been moved to provider.tf to avoid duplication.
+# If you remove provider.tf, you would place the provider block here.
 
 # Define the EC2 Key Pair using the public_key variable
 # This resource will create an SSH key pair in AWS.
@@ -31,9 +29,9 @@ resource "aws_key_pair" "deployer_key" {
 # }
 
 # Example of backend configuration in main.tf (or a separate backend.tf)
-# You mentioned tfstate.config, which is for external backend configuration.
-# If you are using tfstate.config, you typically don't put backend config here.
-# If you decide to embed it:
+# If you are using tfstate.config for backend configuration via -backend-config,
+# you typically don't embed the backend block directly here unless you want
+# to clear the "Missing backend configuration" warning.
 /*
 terraform {
   backend "s3" {
