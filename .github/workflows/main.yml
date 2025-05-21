@@ -2,6 +2,7 @@ name: Terraform CI
 
 on:
   # Allows you to run this workflow manually from the Actions tab in GitHub
+  # The 'public_key' input is still available if you need to manually trigger for specific scenarios.
   workflow_dispatch:
     inputs:
       public_key:
@@ -9,8 +10,7 @@ on:
         required: true
         type: string
 
-  # This will trigger the 'terraform' (plan) job on every push to the main branch.
-  # The 'apply' job will be skipped for push events due to its 'if' condition.
+  # This will now trigger both the 'terraform' (plan) and 'apply' jobs on every push to the main branch.
   push:
     branches:
       - main
@@ -85,15 +85,15 @@ jobs:
           path: cicdtf/planfile # Path to the planfile relative to the working directory
           retention-days: 1 # Retain artifact for 1 day
 
-  # This job will apply the Terraform plan.
-  # It only runs if the 'terraform' job succeeds and the workflow was manually dispatched.
+  # This job will now automatically apply the Terraform plan on 'push' to 'main'
+  # as well as when manually dispatched.
   apply:
     needs: terraform # Ensures 'apply' runs only after 'terraform' job completes successfully
-    if: github.event_name == 'workflow_dispatch' # Restricts execution to manual triggers
+    # The 'if' condition has been removed to allow auto-apply on push events.
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash
+        shell: bash # Explicitly set shell to bash for consistency
         working-directory: cicdtf
 
     steps:
