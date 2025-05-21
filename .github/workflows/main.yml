@@ -38,7 +38,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole # REPLACE with your IAM Role ARN
-          aws-region: ap-south-1 # <--- CHANGED FROM us-east-1
+          aws-region: ap-south-1 
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -47,7 +47,7 @@ jobs:
 
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # <--- CHANGED FROM us-east-1
+        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # REPLACE with your S3 bucket/key/region
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Format
@@ -63,18 +63,20 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -no-color -input=false
+        # IMPORTANT: Output the plan to a file for the 'apply' job to use
+        run: terraform plan -no-color -input=false -out=tfplan 
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
           # If you have specific variables, you can pass them here
           # TF_VAR_example_variable: ${{ secrets.EXAMPLE_SECRET }}
-          TF_VAR_region: ap-south-1 # <--- CHANGED FROM us-east-1
+          TF_VAR_region: ap-south-1
 
       - name: Store Terraform Plan
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
-          path: ${{ env.TF_WORKING_DIR }}/tfplan # You'll need to modify the 'terraform plan' command to output to a file: terraform plan -out=tfplan
+          # Path to the plan file created in the previous step
+          path: ${{ env.TF_WORKING_DIR }}/tfplan 
           if-no-files-found: ignore
 
   terraform_apply:
@@ -84,7 +86,7 @@ jobs:
     # Only run apply if explicitly triggered with 'apply' action, or on push to main (after plan)
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action == 'apply') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main' && success()) # Only apply if plan succeeded
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && success())
 
     environment: production # Use a protected environment for production deployments
     steps:
@@ -95,7 +97,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole # REPLACE with your IAM Role ARN
-          aws-region: ap-south-1 # <--- CHANGED FROM us-east-1
+          aws-region: ap-south-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -109,14 +111,15 @@ jobs:
           path: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Init
-        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # <--- CHANGED FROM us-east-1
+        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # REPLACE with your S3 bucket/key/region
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan # Apply using the saved plan file
+        # Apply using the downloaded plan file
+        run: terraform apply -auto-approve tfplan 
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
-          TF_VAR_region: ap-south-1 # <--- CHANGED FROM us-east-1
+          TF_VAR_region: ap-south-1
 
   terraform_destroy:
     name: 'Terraform Destroy'
@@ -133,7 +136,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsTerraformRole # REPLACE with your IAM Role ARN
-          aws-region: ap-south-1 # <--- CHANGED FROM us-east-1
+          aws-region: ap-south-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -141,7 +144,7 @@ jobs:
           terraform_version: 1.x.x
 
       - name: Terraform Init
-        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # <--- CHANGED FROM us-east-1
+        run: terraform init -backend-config="bucket=my-terraform-state-bucket" -backend-config="key=path/to/my/state/terraform.tfstate" -backend-config="region=ap-south-1" # REPLACE with your S3 bucket/key/region
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform Destroy
@@ -150,4 +153,4 @@ jobs:
           terraform destroy -auto-approve
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
-          TF_VAR_region: ap-south-1 # <--- CHANGED FROM us-east-1
+          TF_VAR_region: ap-south-1
