@@ -1,127 +1,45 @@
 name: Terraform CI
 
 on:
-  workflow_dispatch:
-    inputs:
-      public_key:
-        description: 'SSH Public Key for EC2 Key Pair (e.g., ssh-rsa AAAA...)'
-        required: true
-        type: string
-
   push:
     branches:
-      - main
-
-env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_DEFAULT_REGION: ap-south-1
+      - main # or your default branch
 
 jobs:
-  terraform:
+  apply:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Show current working directory (initial)
-        run: pwd
-
-      - name: List repository root contents
-        run: ls -la ${{ github.workspace }}
-
-      - name: Verify AWS Environment Variables
-        run: |
-          echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+set}"
-          echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:+set}"
-          echo "AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
-          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "::error::Missing AWS credentials."
-            exit 1
-          fi
+        uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
-
-      - name: List working directory contents (inside cicdtf)
-        run: ls -la .
+          terraform_version: 1.x.x # Specify your desired Terraform version
 
       - name: Terraform Init
-        run: terraform init -backend-config="tfstate.config" -migrate-state
-
-      - name: Terraform Validate
-        run: terraform validate
+        run: terraform init
 
       - name: Terraform Plan
-        run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}"
-
-      - name: Upload Planfile
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: planfile-${{ github.run_id }}
-          path: cicdtf/planfile
-          retention-days: 1
-
-  apply:
-    needs: terraform
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
-
-      - name: Download Planfile
-        uses: actions/download-artifact@v4
-        with:
-          name: planfile-${{ github.run_id }}
-          path: cicdtf
-
-      - name: List working directory contents (after download)
-        run: ls -la .
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
-        run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
+        run: terraform apply tfplan -auto-approve
 
   destroy:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
-
+    needs: apply # This ensures the 'destroy' job runs only after 'apply' completes successfully
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
-
-      - name: List working directory contents (inside cicdtf)
-        run: ls -la .
+          terraform_version: 1.x.x # Specify your desired Terraform version
 
       - name: Terraform Init
-        run: terraform init -backend-config="tfstate.config" -migrate-state
+        run: terraform init
 
       - name: Terraform Destroy
-        run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
+        run: terraform destroy -auto-approve
