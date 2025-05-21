@@ -1,0 +1,84 @@
+name: Terraform CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ap-south-1
+  TF_VAR_gitlab_token: ${{ secrets.GITLAB_ACCESS_TOKEN }}
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Terraform Init
+        run: terraform init -backend-config="tfstate.config" -migrate-state
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=planfile
+
+      - name: Upload Planfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: planfile
+          path: planfile
+
+  apply:
+    needs: terraform
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Download Planfile
+        uses: actions/download-artifact@v4
+        with:
+          name: planfile
+          path: .
+
+      - name: Terraform Apply
+        run: terraform apply -input=false planfile
+
+  destroy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Terraform Init
+        run: terraform init -backend-config="tfstate.config" -migrate-state
+
+      - name: Terraform Destroy
+        run: terraform destroy --auto-approve
