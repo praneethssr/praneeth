@@ -4,7 +4,7 @@ on:
   workflow_dispatch: # Allows manual triggering of the workflow
     inputs:
       public_key:
-        description: 'SSH Public Key for EC2 Key Pair'
+        description: 'SSH Public Key for EC2 Key Pair (e.g., ssh-rsa AAAA...)'
         required: true
         type: string
   push:
@@ -13,6 +13,7 @@ on:
 
 env:
   # AWS credentials and region are set as environment variables for Terraform
+  # CRITICAL: Ensure these GitHub secrets are correctly configured in your repository settings.
   AWS_ACCESS_KEY_ID: ${{ secrets.MY_AWS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.MY_AWS_ACCESS_KEY }}
   AWS_DEFAULT_REGION: ap-south-1
@@ -23,8 +24,8 @@ jobs:
     defaults:
       run:
         shell: bash # Uses bash for all run commands in this job
-        # CRITICAL FIX: Changed 'working-directory' to 'cicdtf' based on your repository structure.
-        # Your Terraform files (main.tf, provider.tf, tfstate.config) are directly inside 'cicdtf'.
+        # CRITICAL: This 'working-directory' MUST match your repository structure.
+        # Based on your previous screenshot, your Terraform files are in 'cicdtf'.
         working-directory: cicdtf
 
     steps:
@@ -32,14 +33,25 @@ jobs:
         uses: actions/checkout@v3 # Checks out your repository code into the runner's workspace
 
       # DEBUGGING STEP: Show current working directory (initial)
-      # This will print the path before the 'working-directory' default takes effect for the job's steps.
       - name: Show current working directory (initial)
         run: pwd
 
       # DEBUGGING STEP: List repository root contents
-      # This will show if the 'cicdtf' directory exists directly under your repository root.
       - name: List repository root contents
         run: ls -la ${{ github.workspace }}
+
+      # NEW DEBUGGING STEP: Verify AWS environment variables are set
+      # This will check if the variables are present in the shell environment.
+      # It will NOT print the secret values.
+      - name: Verify AWS Environment Variables
+        run: |
+          echo "Checking AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+set}"
+          echo "Checking AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:+set}"
+          echo "Checking AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY is not set. Please check your GitHub Secrets."
+            exit 1
+          fi
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3 # Sets up Terraform CLI on the runner
@@ -47,23 +59,22 @@ jobs:
           terraform_version: 1.5.7 # Specifies the Terraform version to use
 
       # DEBUGGING STEP: This will list the contents of the 'working-directory' (now 'cicdtf')
-      # This step should now successfully run and show your Terraform files.
       - name: List working directory contents (inside cicdtf)
         run: ls -la .
 
       - name: Terraform Init
         # Initializes Terraform backend and modules.
         # -backend-config="tfstate.config": Uses the specified file for backend configuration.
-        # -migrate-state: Migrates state if the backend configuration changes (useful for initial setup).
+        # -migrate-state: Migrates state if the backend configuration changes.
         run: terraform init -backend-config="tfstate.config" -migrate-state
 
       - name: Terraform Validate
         # Validates the Terraform configuration files for syntax and consistency.
-        run: terraform validate
+        # Pass the public_key as a variable for validation.
+        run: terraform validate -var="public_key=${{ github.event.inputs.public_key }}"
 
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'.
-        # The 'planfile' will be created directly within the 'working-directory' (i.e., 'cicdtf').
         # Pass the public_key as a variable.
         run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}"
 
@@ -71,20 +82,16 @@ jobs:
         uses: actions/upload-artifact@v4 # Uploads the generated planfile as a workflow artifact
         with:
           name: planfile # Name of the artifact for easy identification
-          # The 'path' is relative to the 'working-directory' ('cicdtf').
-          # Since 'planfile' was created in 'cicdtf', we just specify 'planfile' here.
-          path: planfile
+          path: planfile # Path is relative to the 'working-directory' ('cicdtf')
 
   apply:
     needs: terraform # This job will only run after the 'terraform' job completes successfully
     runs-on: ubuntu-latest
-    # This job is configured to run ONLY when the workflow is manually triggered (workflow_dispatch)
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' # Runs only if manually triggered
     defaults:
       run:
         shell: bash
-        # CRITICAL FIX: Changed 'working-directory' to 'cicdtf'.
-        working-directory: cicdtf
+        working-directory: cicdtf # Must match the directory containing your .tf files
 
     steps:
       - name: Checkout code
@@ -96,35 +103,27 @@ jobs:
           terraform_version: 1.5.7
 
       - name: Download Planfile
-        uses: actions/download-artifact@v4 # Downloads the planfile artifact from the 'terraform' job
+        uses: actions/download-artifact@v4 # Downloads the planfile artifact
         with:
-          name: planfile # Specifies the name of the artifact to download
-          # The 'path' here is where the downloaded artifact will be placed.
-          # We want it in our current 'working-directory' ('cicdtf'), so we specify 'cicdtf'.
-          # This will result in the planfile being at 'your-repo/cicdtf/planfile'.
-          path: cicdtf
+          name: planfile
+          path: cicdtf # Downloads the artifact into the 'cicdtf' directory
 
-      # DEBUGGING STEP: This will list the contents of the 'working-directory' (e.g., 'cicdtf')
-      # after the planfile has been downloaded. Verify 'planfile' is listed.
+      # DEBUGGING STEP: List contents of the working directory after download
       - name: List working directory contents (after download)
         run: ls -la .
 
       - name: Terraform Apply
         # Applies the saved planfile.
-        # -input=false: Prevents Terraform from prompting for input during apply.
-        # 'planfile' is directly accessible because it's in the 'working-directory'.
         # Pass the public_key as a variable during apply as well.
         run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
 
   destroy:
     runs-on: ubuntu-latest
-    # This job is configured to run ONLY when the workflow is manually triggered (workflow_dispatch)
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' # Runs only if manually triggered
     defaults:
       run:
         shell: bash
-        # CRITICAL FIX: Changed 'working-directory' to 'cicdtf'.
-        working-directory: cicdtf
+        working-directory: cicdtf # Must match the directory containing your .tf files
 
     steps:
       - name: Checkout code
@@ -135,8 +134,7 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # DEBUGGING STEP: This will list the contents of the 'working-directory' (now 'cicdtf')
-      # Check the workflow logs for this step to verify your Terraform files are present.
+      # DEBUGGING STEP: List contents of the working directory
       - name: List working directory contents (inside cicdtf)
         run: ls -la .
 
@@ -146,7 +144,5 @@ jobs:
 
       - name: Terraform Destroy
         # Destroys all resources managed by the Terraform configuration.
-        # --auto-approve: Automatically approves the destroy operation without prompting.
         # Pass the public_key as a variable during destroy as well.
         run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
-        
