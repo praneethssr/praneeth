@@ -2,6 +2,11 @@ name: Terraform CI
 
 on:
   workflow_dispatch: # Allows manual triggering of the workflow
+    inputs:
+      public_key:
+        description: 'SSH Public Key for EC2 Key Pair'
+        required: true
+        type: string
   push:
     branches:
       - main # Triggers on pushes to the 'main' branch
@@ -59,7 +64,8 @@ jobs:
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'.
         # The 'planfile' will be created directly within the 'working-directory' (i.e., 'cicdtf').
-        run: terraform plan -out=planfile
+        # Pass the public_key as a variable.
+        run: terraform plan -out=planfile -var="public_key=${{ github.event.inputs.public_key }}"
 
       - name: Upload Planfile
         uses: actions/upload-artifact@v4 # Uploads the generated planfile as a workflow artifact
@@ -107,7 +113,8 @@ jobs:
         # Applies the saved planfile.
         # -input=false: Prevents Terraform from prompting for input during apply.
         # 'planfile' is directly accessible because it's in the 'working-directory'.
-        run: terraform apply -input=false planfile
+        # Pass the public_key as a variable during apply as well.
+        run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
 
   destroy:
     runs-on: ubuntu-latest
@@ -140,4 +147,5 @@ jobs:
       - name: Terraform Destroy
         # Destroys all resources managed by the Terraform configuration.
         # --auto-approve: Automatically approves the destroy operation without prompting.
-        run: terraform destroy --auto-approve
+        # Pass the public_key as a variable during destroy as well.
+        run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
