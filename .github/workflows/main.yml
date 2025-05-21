@@ -71,8 +71,8 @@ jobs:
 
       - name: Terraform Validate
         # Validates the Terraform configuration files for syntax and consistency.
-        # Pass the public_key as a variable for validation.
-        run: terraform validate -var="public_key=${{ github.event.inputs.public_key }}"
+        # Removed -var flag as it's not supported by terraform validate.
+        run: terraform validate
 
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'.
