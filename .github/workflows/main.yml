@@ -10,7 +10,7 @@ on:
         type: string
 
   # This will trigger the 'terraform' (plan) job on every push to the main branch.
-  # The 'apply' and 'destroy' jobs will be skipped for push events due to their 'if' conditions.
+  # The 'apply' job will be skipped for push events due to its 'if' condition.
   push:
     branches:
       - main
@@ -119,36 +119,3 @@ jobs:
         # Applies the infrastructure changes based on the downloaded planfile
         # The 'public_key' variable is passed again, as it might be needed for the apply operation
         run: terraform apply -input=false planfile -var="public_key=${{ github.event.inputs.public_key }}"
-
-  # This job will destroy the Terraform-managed infrastructure.
-  # It only runs if the 'apply' job succeeds and the workflow was manually dispatched.
-  # WARNING: Automating 'destroy' can be risky. Use with caution.
-  destroy:
-    needs: apply # Ensures 'destroy' runs only after 'apply' job completes successfully
-    if: github.event_name == 'workflow_dispatch' # Restricts execution to manual triggers
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
-
-      - name: List working directory contents (inside cicdtf)
-        run: ls -la .
-
-      - name: Terraform Init
-        # Initializes Terraform for the destroy operation
-        run: terraform init -backend-config="tfstate.config" -migrate-state
-
-      # - name: Terraform Destroy
-      #   # Destroys the infrastructure. '--auto-approve' bypasses confirmation.
-      #   # Ensure 'public_key' is passed if your destroy configuration relies on it.
-      #   run: terraform destroy --auto-approve -var="public_key=${{ github.event.inputs.public_key }}"
