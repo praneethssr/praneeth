@@ -65,19 +65,7 @@ jobs:
         # Explicitly output planfile to the current working directory (cicdtf)
         run: terraform plan -out=planfile -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}"
 
-      - name: Upload Planfile and Lock File
-        # Uploads the generated planfile and the .terraform.lock.hcl file as artifacts.
-        # This ensures consistency between the 'plan' and 'apply' jobs.
-        uses: actions/upload-artifact@v4
-        if: success() # Only upload if the plan step was successful
-        with:
-          name: terraform-artifacts-${{ github.run_id }} # Creates a unique name for the artifact bundle
-          # Paths are now explicitly relative to the repository root (GITHUB_WORKSPACE)
-          path: |
-            cicdtf/planfile                # Path to the generated planfile within the working directory
-            cicdtf/.terraform.lock.hcl     # Path to the dependency lock file within the working directory
-          retention-days: 1 # Retain artifacts for 1 day (adjust as needed)
-        # Removed 'working-directory: cicdtf' from this step to rely on explicit paths from repo root
+      # The 'Upload Planfile and Lock File' step has been removed as requested.
 
   # This job automatically applies the Terraform plan if the 'terraform' job succeeds.
   apply:
