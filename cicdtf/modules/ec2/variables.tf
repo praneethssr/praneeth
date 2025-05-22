@@ -27,3 +27,8 @@ variable "subnet_id" {
   description = "Subnet ID"
   type        = string
 }
+
+variable "public_key" {
+  description = "The SSH public key content for the EC2 Key Pair."
+  type        = string
+}
