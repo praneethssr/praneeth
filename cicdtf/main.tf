@@ -8,22 +8,28 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = "ap-south-1"
-}
+# AWS Provider Configuration
+# Defines the cloud provider and the region for resource deployment.
+# provider "aws" {
+#   region = "ap-south-1"
+# }
 
-# VPC module call
+# VPC Module Call
+# This section calls a local module to create the Virtual Private Cloud (VPC)
+# and its associated public subnet.
 module "vpc" {
-  source = "./modules/vpc"
+  source = "./modules/vpc" # Path to the VPC module
 
-  cidr_block  = "10.0.0.0/16"
-  vpc_name    = "my-app-vpc"
-  subnet_cidr = "10.0.1.0/24"
-  az          = "ap-south-1a"
-  subnet_name = "main-public-subnet"
+  cidr_block  = "10.0.0.0/16"      # CIDR block for the entire VPC
+  vpc_name    = "my-app-vpc"       # Name tag for the VPC
+  subnet_cidr = "10.0.1.0/24"      # CIDR block for the public subnet
+  az          = "ap-south-1a"      # Availability Zone for the subnet
+  subnet_name = "main-public-subnet" # Name tag for the public subnet
 }
 
-# Data source to get latest Amazon Linux 2 AMI
+# Data Source: Latest Amazon Linux 2 AMI
+# Dynamically retrieves the ID of the most recent Amazon Linux 2 AMI
+# suitable for HVM virtualization and x86_64 architecture.
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
@@ -39,25 +45,31 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# SSH public key variable (content of your key)
+# Variable Declaration: SSH Public Key
+# This variable expects the content of an SSH public key, which will be used
+# to create an EC2 Key Pair for secure access to instances.
 variable "public_key" {
   description = "The SSH public key content for the EC2 Key Pair."
   type        = string
 }
 
-# Create key pair from the public key content variable
+# Resource: AWS Key Pair
+# Creates an SSH key pair in AWS using the public key content provided
+# via the 'public_key' variable.
 resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key"
-  public_key = var.public_key
+  key_name   = "my-deployer-key" # Name of the key pair in AWS
+  public_key = var.public_key    # Content of the public key
 }
 
-# EC2 module call
+# EC2 Module Call
+# This section calls a local module to provision an EC2 instance,
+# integrating it with the previously created VPC and key pair.
 module "ec2" {
-  source        = "./modules/ec2"
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t2.micro"
-  key_name      = aws_key_pair.deployer_key.key_name
-  instance_name = "MyEC2Instance"
-  vpc_id        = module.vpc.vpc_id
-  subnet_id     = module.vpc.public_subnet_id
+  source        = "./modules/ec2" # Path to the EC2 module
+  ami           = data.aws_ami.amazon_linux_2.id # ID of the latest Amazon Linux 2 AMI
+  instance_type = "t2.micro"      # Instance type for the EC2 instance
+  key_name      = aws_key_pair.deployer_key.key_name # Name of the SSH key pair
+  instance_name = "MyEC2Instance" # Name tag for the EC2 instance
+  vpc_id        = module.vpc.vpc_id # ID of the VPC created by the 'vpc' module
+  subnet_id     = module.vpc.public_subnet_id # ID of the public subnet from the 'vpc' module
 }
