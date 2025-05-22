@@ -1,53 +1,41 @@
-name: Terraform CICD Pipeline
+name: Terraform Deployment
 
 on:
   push:
     branches:
-      - main
+      - main  # or your default branch
+  pull_request:
 
 jobs:
   terraform:
+    name: Apply Terraform
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.6
+          terraform_version: 1.7.0 # change to your version
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1 # or your region
 
       - name: Terraform Init
-        working-directory: ./cicdtf
         run: terraform init
-        # shell: bash # Removed explicit bash shell declaration
-        env:
-          AWS_REGION: ap-south-1
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Validate
+        run: terraform validate
 
       - name: Terraform Plan
-        working-directory: ./cicdtf
         run: terraform plan -out=tfplan
-        # shell: bash # Removed explicit bash shell declaration
-        env:
-          AWS_REGION: ap-south-1
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        # Optimization Tip: If your Terraform configuration is very large,
-        # consider breaking it down into smaller, focused modules.
-        # This can reduce the time it takes for Terraform to build the dependency graph.
-        # Also, excessive use of data sources that query AWS APIs can slow down planning.
 
       - name: Terraform Apply
-        working-directory: ./cicdtf
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan
-        # shell: bash # Removed explicit bash shell declaration
-        env:
-          AWS_REGION: ap-south-1
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        # Optimization Tip: For production, consider removing -auto-approve
-        # and implementing a manual approval step or a separate manual workflow_dispatch for apply.
-        # This provides a safety gate before applying changes to critical infrastructure.
