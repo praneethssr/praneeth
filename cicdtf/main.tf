@@ -65,13 +65,13 @@ resource "aws_key_pair" "deployer_key" {
 # This section calls a local module to provision an EC2 instance,
 # integrating it with the previously created VPC and key pair.
 module "ec2" {
-  source        = "./modules/ec2" # Path to the EC2 module
-  ami           = data.aws_ami.amazon_linux_2.id # ID of the latest Amazon Linux 2 AMI
-  instance_type = "t2.micro"      # Instance type for the EC2 instance
-  key_name      = aws_key_pair.deployer_key.key_name # Name of the SSH key pair
-  instance_name = "MyEC2Instance" # Name tag for the EC2 instance
-  vpc_id        = module.vpc.vpc_id # ID of the VPC created by the 'vpc' module
-  subnet_id     = module.vpc.public_subnet_id # ID of the public subnet from the 'vpc' module
+  source        = "./modules/ec2"
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
+  key_name      = aws_key_pair.deployer_key.key_name
+  instance_name = "MyEC2Instance"
+  vpc_id        = module.vpc.vpc_id
+  subnet_id     = module.vpc.public_subnet_id
 
-  public_key    = AWS_PBULIC_KEY    # pass it as 'public_key'
+  public_key    = var.public_key # Only include this if your module uses it
 }
