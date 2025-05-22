@@ -7,8 +7,9 @@ variable "instance_type" {
   type = string
 }
 
-variable "public_key" {
+variable "key_name" {
   type = string
+  description = "Name of the EC2 key pair to use"
 }
 
 
