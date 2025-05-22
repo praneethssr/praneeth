@@ -7,9 +7,10 @@ variable "instance_type" {
   type = string
 }
 
-variable "key_name" {
+variable "public_key" {
   type = string
 }
+
 
 variable "instance_name" {
   type = string
