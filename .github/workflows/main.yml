@@ -103,7 +103,7 @@ jobs:
         with:
           name: terraform-artifacts-${{ github.run_id }} # Use the same artifact name as upload
           path: cicdtf # Downloads artifacts into the working directory (cicdtf)
-        working-directory: cicdtf # <--- CORRECTED: This should be here, aligned with 'uses'
+        working-directory: cicdtf # Correct placement: This should be here, aligned with 'uses' and 'with'
 
       - name: Terraform Init (in Apply Job)
         # Re-initializes Terraform in the apply job to ensure consistency with the downloaded lock file.
