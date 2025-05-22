@@ -33,3 +33,10 @@ variable "aws_region" {
 #   type        = string
 #   default     = "t2.micro"
 # }
+# cicdtf/variables.tf
+
+variable "instance_az" {
+  description = "The AWS Availability Zone for the EC2 instance and public subnet."
+  type        = string
+  default     = "ap-south-1a" # You can change this default AZ if needed
+}
