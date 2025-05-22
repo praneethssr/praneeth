@@ -41,7 +41,7 @@ jobs:
           echo "AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
           # Fail the job if AWS credentials are not found in secrets
           if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "::error::Missing AWS credentials. Please ensure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set in GitHub Secrets."
+            echo "::error::Missing AWS credentials. Please ensure AWS_ACCESS_KEY_ID and AWS_SECRET_KEY are set in GitHub Secrets."
             exit 1
           fi
 
@@ -71,10 +71,12 @@ jobs:
         if: success() # Only upload if the plan step was successful
         with:
           name: terraform-artifacts-${{ github.run_id }} # Creates a unique name for the artifact bundle
+          # Paths are now explicitly relative to the repository root (GITHUB_WORKSPACE)
           path: |
-            cicdtf/planfile               # Path to the generated planfile
-            cicdtf/.terraform.lock.hcl    # Path to the dependency lock file
+            cicdtf/planfile                # Path to the generated planfile within the working directory
+            cicdtf/.terraform.lock.hcl     # Path to the dependency lock file within the working directory
           retention-days: 1 # Retain artifacts for 1 day (adjust as needed)
+        # Removed 'working-directory: cicdtf' from this step to rely on explicit paths from repo root
 
   # This job automatically applies the Terraform plan if the 'terraform' job succeeds.
   apply:
