@@ -1,11 +1,10 @@
-# Security Group
 resource "aws_security_group" "ec2_sg" {
   name_prefix = "${var.instance_name}-sg-"
   description = "Allow SSH inbound traffic"
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "SSH access"
+    description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -24,12 +23,11 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-# EC2 Instance
 resource "aws_instance" "ec2_instance" {
   ami                    = var.ami
   instance_type          = var.instance_type
-  key_name               = var.key_name
   subnet_id              = var.subnet_id
+  key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   tags = {
