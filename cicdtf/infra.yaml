@@ -1,7 +1,0 @@
-jobs:
-  terraform:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: infra # <-- This is where the error likely originates
