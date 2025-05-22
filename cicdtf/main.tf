@@ -1,10 +1,6 @@
-# cicdtf/main.tf
-
-# Define the AWS provider for your infrastructure.
-# This block must be present in your root module and specifies the AWS region.
-provider "aws" {
-  region = var.aws_region # Retrieves the region from cicdtf/variables.tf
-}
+# provider "aws" {
+#   region = var.aws_region # Retrieves the region from cicdtf/variables.tf
+# }
 
 # Backend configuration for Terraform state management.
 # This tells Terraform to store its state in an S3 bucket for collaborative use and durability.
