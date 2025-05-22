@@ -1,15 +1,84 @@
-resource "aws_vpc" "this" {
-  cidr_block = var.cidr_block
+# modules/vpc/main.tf
+
+# Input variables for the VPC module
+variable "cidr_block" {
+  description = "The CIDR block for the VPC."
+  type        = string
+}
+
+variable "vpc_name" {
+  description = "The name tag for the VPC."
+  type        = string
+}
+
+variable "subnet_cidr" {
+  description = "The CIDR block for the public subnet."
+  type        = string
+}
+
+variable "az" {
+  description = "The Availability Zone for the public subnet."
+  type        = string
+}
+
+variable "subnet_name" {
+  description = "The name tag for the public subnet."
+  type        = string
+}
+
+# Resource: AWS VPC
+# Creates the main Virtual Private Cloud.
+resource "aws_vpc" "main" {
+  cidr_block           = var.cidr_block
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
   tags = {
     Name = var.vpc_name
   }
 }
 
+# Resource: Internet Gateway
+# Attaches an Internet Gateway to the VPC to allow communication with the internet.
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "${var.vpc_name}-igw"
+  }
+}
+
+# Resource: Public Subnet
+# Creates a public subnet within the VPC.
 resource "aws_subnet" "public" {
-  vpc_id            = aws_vpc.this.id
-  cidr_block        = var.subnet_cidr
-  availability_zone = var.az
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.subnet_cidr
+  availability_zone       = var.az
+  map_public_ip_on_launch = true # Automatically assign public IP to instances in this subnet
+
   tags = {
     Name = var.subnet_name
   }
+}
+
+# Resource: Route Table for Public Subnet
+# Creates a route table and a default route to the Internet Gateway.
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0" # Route all outbound traffic
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = {
+    Name = "${var.vpc_name}-public-rt"
+  }
+}
+
+# Resource: Route Table Association
+# Associates the public subnet with the public route table.
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
 }
