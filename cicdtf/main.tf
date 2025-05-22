@@ -10,6 +10,7 @@ terraform {
 }
 
 # AWS Provider
+# Defines the cloud provider and the region for resource deployment.
 # provider "aws" {
 #   region = "ap-south-1"
 # }
