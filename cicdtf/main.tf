@@ -1,23 +1,29 @@
-# C:\Users\admin\cicdtf\cicdtf\main.tf
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+}
 
-# 1. VPC Module (already there)
+provider "aws" {
+  region = "ap-south-1"
+}
+
+# VPC module call
 module "vpc" {
   source = "./modules/vpc"
-  # ... other variables for your VPC module ...
-  cidr_block  = "10.0.0.0/16" # Example
-  vpc_name    = "my-app-vpc"  # Example
-  subnet_cidr = "10.0.1.0/24" # Example
-  az          = "ap-south-1a" # <--- IMPORTANT: Set this to a supported AZ
-  subnet_name = "main-public-subnet" # Example
+
+  cidr_block  = "10.0.0.0/16"
+  vpc_name    = "my-app-vpc"
+  subnet_cidr = "10.0.1.0/24"
+  az          = "ap-south-1a"
+  subnet_name = "main-public-subnet"
 }
 
-# 2. AWS Key Pair Resource (MUST be in the root module)
-resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key"
-  public_key = file("my-deployer-key.pub") # <--- Use the correct absolute path
-}
-# 3. AWS AMI Data Source (MUST be in the root module if referenced by the module)
-# This will find the latest Amazon Linux 2 AMI
+# Data source to get latest Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
@@ -33,12 +39,24 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# 4. EC2 Module (already there, but now referencing the correctly declared resources)
+# SSH public key variable (content of your key)
+variable "public_key" {
+  description = "The SSH public key content for the EC2 Key Pair."
+  type        = string
+}
+
+# Create key pair from the public key content variable
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "my-deployer-key"
+  public_key = var.public_key
+}
+
+# EC2 module call
 module "ec2" {
   source        = "./modules/ec2"
-  ami           = data.aws_ami.amazon_linux_2.id # Reference the AMI ID from the data source
+  ami           = data.aws_ami.amazon_linux_2.id
   instance_type = "t2.micro"
-  key_name      = aws_key_pair.deployer_key.key_name # Reference the key name from the resource
+  key_name      = aws_key_pair.deployer_key.key_name
   instance_name = "MyEC2Instance"
   vpc_id        = module.vpc.vpc_id
   subnet_id     = module.vpc.public_subnet_id
