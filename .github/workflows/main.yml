@@ -1,4 +1,4 @@
-name: Terraform Init Pipeline
+name: Terraform CICD Pipeline
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  terraform-init:
+  terraform:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,11 +16,27 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.6  # or your required version
+          terraform_version: 1.5.6
 
       - name: Terraform Init
-        working-directory: ./terraform
+        working-directory: ./cicdtf
         run: terraform init
+        env:
+          AWS_REGION: ap-south-1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Plan
+        working-directory: ./cicdtf
+        run: terraform plan -out=tfplan
+        env:
+          AWS_REGION: ap-south-1
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Apply
+        working-directory: ./cicdtf
+        run: terraform apply -auto-approve tfplan
         env:
           AWS_REGION: ap-south-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
