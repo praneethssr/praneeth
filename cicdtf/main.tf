@@ -1,5 +1,6 @@
 terraform {
   required_version = ">= 1.0"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -8,11 +9,14 @@ terraform {
   }
 }
 
+# AWS Provider
 # provider "aws" {
 #   region = "ap-south-1"
 # }
 
+# --------------------------
 # VPC Module
+# --------------------------
 module "vpc" {
   source       = "./modules/vpc"
   cidr_block   = "10.0.0.0/16"
@@ -22,13 +26,26 @@ module "vpc" {
   subnet_name  = "main-public-subnet"
 }
 
-# 2. AWS Key Pair Resource (MUST be in the root module)
+# --------------------------
+# SSH Public Key variable
+# --------------------------
+variable "public_key" {
+  description = "The SSH public key content for the EC2 Key Pair."
+  type        = string
+  default     = file("C:\\Users\\admin\\.ssh\\my-deployer-key.pub")
+}
+
+# --------------------------
+# AWS Key Pair Resource
+# --------------------------
 resource "aws_key_pair" "deployer_key" {
   key_name   = "my-deployer-key"
-  public_key = file("C:\\Users\\admin\\.ssh\\my-deployer-key.pub")
+  public_key = var.public_key
 }
-# 3. AWS AMI Data Source (MUST be in the root module if referenced by the module)
-# This will find the latest Amazon Linux 2 AMI
+
+# --------------------------
+# AWS AMI Data Source
+# --------------------------
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
@@ -44,19 +61,9 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# SSH Public Key variable
-variable "public_key" {
-  description = "The SSH public key content for the EC2 Key Pair."
-  type        = string
-}
-
-# Create AWS Key Pair
-resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key"
-  public_key = var.public_key
-}
-
+# --------------------------
 # EC2 Module
+# --------------------------
 module "ec2" {
   source         = "./modules/ec2"
   ami            = data.aws_ami.amazon_linux_2.id
