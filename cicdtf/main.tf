@@ -1,10 +1,10 @@
 terraform {
   backend "s3" {
-    bucket  = "terraform-state-ssr123-ap-south-1"   # Your existing S3 bucket
+    bucket  = "terraform-state-ssr123-ap-south-1"
     key     = "cicdtf/terraform.tfstate"
     region  = "ap-south-1"
     encrypt = true
-    # dynamodb_table = "your-terraform-locks-table" # Optional for locking
+    # dynamodb_table = "your-terraform-locks-table"
   }
 }
 
@@ -14,18 +14,16 @@ variable "public_key" {
 }
 
 variable "instance_az" {
-  description = "Availability zone for the subnet"
+  description = "Availability zone for subnet"
   type        = string
   default     = "ap-south-1a"
 }
 
-# Create the EC2 Key Pair in AWS using the provided public key
 resource "aws_key_pair" "deployer_key" {
   key_name   = "my-deployer-key"
   public_key = var.public_key
 }
 
-# Find the latest Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
@@ -41,7 +39,6 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# VPC Module
 module "vpc" {
   source      = "./modules/vpc"
   cidr_block  = "10.0.0.0/16"
@@ -51,7 +48,6 @@ module "vpc" {
   subnet_name = "main-public-subnet"
 }
 
-# EC2 Module
 module "ec2" {
   source        = "./modules/ec2"
   ami           = data.aws_ami.amazon_linux_2.id
