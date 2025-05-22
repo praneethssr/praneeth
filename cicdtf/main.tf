@@ -22,7 +22,13 @@ module "vpc" {
   subnet_name  = "main-public-subnet"
 }
 
-# Get latest Amazon Linux 2 AMI
+# 2. AWS Key Pair Resource (MUST be in the root module)
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "my-deployer-key"
+  public_key = file("my-deployer-key.pub") # <--- Use the correct absolute path
+}
+# 3. AWS AMI Data Source (MUST be in the root module if referenced by the module)
+# This will find the latest Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
