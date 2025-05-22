@@ -8,8 +8,8 @@ variable "instance_type" {
   type        = string
 }
 
-variable "key_name" {
-  description = "Key pair name for SSH access"
+variable "public_key" {
+  description = "The SSH public key content for the EC2 Key Pair."
   type        = string
 }
 
