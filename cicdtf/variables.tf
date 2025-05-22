@@ -8,3 +8,9 @@ variable "instance_az" {
   type        = string
   default     = "ap-south-1a"
 }
+
+variable "aws_region" {
+  description = "The AWS region to deploy resources into"
+  type        = string
+  default     = "ap-south-1"
+}
