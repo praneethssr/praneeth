@@ -21,6 +21,7 @@ jobs:
       - name: Terraform Init
         working-directory: ./cicdtf
         run: terraform init
+        shell: bash # Added explicit bash shell
         env:
           AWS_REGION: ap-south-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -29,6 +30,7 @@ jobs:
       - name: Terraform Plan
         working-directory: ./cicdtf
         run: terraform plan -out=tfplan
+        shell: bash # Added explicit bash shell
         env:
           AWS_REGION: ap-south-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -37,6 +39,7 @@ jobs:
       - name: Terraform Apply
         working-directory: ./cicdtf
         run: terraform apply -auto-approve tfplan
+        shell: bash # Added explicit bash shell
         env:
           AWS_REGION: ap-south-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
