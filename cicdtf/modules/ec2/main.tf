@@ -39,4 +39,8 @@ resource "aws_instance" "this" {
     Name = var.instance_name
   }
 }
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "my-deployer-key"
+  public_key = var.public_key
+}
 
