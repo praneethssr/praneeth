@@ -62,6 +62,7 @@ jobs:
       - name: Terraform Plan
         # Generates an execution plan and saves it to 'planfile'.
         # The 'public_key' variable is passed directly using the -var flag from a GitHub Secret.
+        # Explicitly output planfile to the current working directory (cicdtf)
         run: terraform plan -out=planfile -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}"
 
       - name: Upload Planfile and Lock File
