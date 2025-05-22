@@ -9,3 +9,7 @@ resource "aws_instance" "this" {
     Name = var.instance_name
   }
 }
+resource "aws_key_pair" "deployer_key" {
+  key_name   = var.key_name
+  public_key = var.ssh_public_key
+}
