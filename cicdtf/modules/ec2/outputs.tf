@@ -4,3 +4,6 @@ output "security_group_id" {
 output "instance_id" {
   value = aws_instance.this.id
 }
+output "key_name" {
+  value = aws_key_pair.deployer_key.key_name
+}
