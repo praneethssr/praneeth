@@ -28,12 +28,19 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
+# Conditionally create key pair only if public_key is provided
+resource "aws_key_pair" "deployer_key" {
+  count       = var.public_key != "" ? 1 : 0
+  key_name    = "my-deployer-key"
+  public_key  = var.public_key
+}
+
 resource "aws_instance" "this" {
-  ami                         = var.ami != "" ? var.ami : data.aws_ami.amazon_linux.id
-  instance_type               = var.instance_type
-  key_name                    = var.key_name
-  subnet_id                   = var.subnet_id
-  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  ami                    = var.ami != "" ? var.ami : data.aws_ami.amazon_linux.id
+  instance_type          = var.instance_type
+  key_name               = var.public_key != "" ? aws_key_pair.deployer_key[0].key_name : var.key_name
+  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   tags = {
     Name = var.instance_name
