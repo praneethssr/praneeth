@@ -25,7 +25,7 @@ module "vpc" {
 # 2. AWS Key Pair Resource (MUST be in the root module)
 resource "aws_key_pair" "deployer_key" {
   key_name   = "my-deployer-key"
-  public_key = file("my-deployer-key.pub") # <--- Use the correct absolute path
+  public_key = file("C:\\Users\\admin\\.ssh\\my-deployer-key.pub")
 }
 # 3. AWS AMI Data Source (MUST be in the root module if referenced by the module)
 # This will find the latest Amazon Linux 2 AMI
