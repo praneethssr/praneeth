@@ -10,7 +10,6 @@ on:
 
 jobs:
   terraform:
-    name: Terraform Apply
     runs-on: ubuntu-latest
 
     steps:
@@ -30,14 +29,14 @@ jobs:
           aws-region: ap-south-1
 
       - name: Terraform Init
-        run: terraform init -reconfigure
+        run: cd cicdtf && terraform init -reconfigure
 
       - name: Terraform Validate
-        run: terraform validate
+        run: cd cicdtf && terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: cd cicdtf && terraform plan -out=tfplan
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
+        run: cd cicdtf && terraform apply -auto-approve tfplan
