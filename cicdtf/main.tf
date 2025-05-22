@@ -11,7 +11,7 @@ terraform {
 
 # AWS Provider
 # Defines the cloud provider and the region for resource deployment.
-# provider "aws" { # This line was uncommented
+# provider "aws" { # This line is now uncommented
 #   region = "ap-south-1"
 # }
 
