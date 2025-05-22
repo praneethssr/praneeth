@@ -77,7 +77,7 @@ jobs:
             planfile                # Path relative to the working-directory of this action (cicdtf)
             .terraform.lock.hcl     # Path relative to the working-directory of this action (cicdtf)
           retention-days: 1 # Retain artifacts for 1 day (adjust as needed)
-        working-directory: cicdtf # <--- IMPORTANT: This tells the 'upload-artifact' action to look inside 'cicdtf' for the files
+        working-directory: cicdtf # This tells the 'upload-artifact' action to look inside 'cicdtf' for the files
 
   # This job automatically applies the Terraform plan if the 'terraform' job succeeds.
   apply:
@@ -103,6 +103,7 @@ jobs:
         with:
           name: terraform-artifacts-${{ github.run_id }} # Use the same artifact name as upload
           path: cicdtf # Downloads artifacts into the working directory (cicdtf)
+        working-directory: cicdtf # <--- CORRECTED: This should be here, aligned with 'uses'
 
       - name: Terraform Init (in Apply Job)
         # Re-initializes Terraform in the apply job to ensure consistency with the downloaded lock file.
@@ -113,4 +114,3 @@ jobs:
         # Applies the infrastructure changes based on the downloaded planfile.
         # The 'public_key' variable is passed again to ensure consistency during apply.
         run: terraform apply -input=false -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}" planfile
-        
