@@ -1,85 +1,46 @@
+name: Terraform CI/CD
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
 
 env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_DEFAULT_REGION: ap-south-1
+  AWS_REGION: ap-south-1
 
 jobs:
   terraform:
+    name: Terraform Plan & Apply
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Verify AWS Environment Variables
-        run: |
-          echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+set}"
-          echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:+set}"
-          echo "AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:+set}"
-          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "::error::Missing AWS credentials."
-            exit 1
-          fi
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.6
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
+    - name: Terraform Init
+      run: terraform init
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform Init
-        run: terraform init
+    - name: Terraform Validate
+      run: terraform validate
 
-      - name: Terraform Validate
-        run: terraform validate
+    - name: Terraform Plan
+      run: terraform plan -out=planfile
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        TF_VAR_public_key: ${{ secrets.PUBLIC_KEY }}
 
-      - name: Terraform Plan
-        run: terraform plan -out=planfile -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}"
-
-      - name: Upload Planfile and Lock File
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: terraform-artifacts-${{ github.run_id }}
-          path: |
-            cicdtf/planfile
-            cicdtf/.terraform.lock.hcl
-
-  apply:
-    needs: terraform
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: cicdtf
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
-
-      - name: Download Planfile and Lock File
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-artifacts-${{ github.run_id }}
-          path: cicdtf
-
-      - name: Terraform Init (in Apply Job)
-        run: terraform init -reconfigure
-
-      - name: Terraform Apply
-        run: terraform apply -input=false planfile
+    - name: Terraform Apply
+      run: terraform apply -input=false planfile
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        TF_VAR_public_key: ${{ secrets.PUBLIC_KEY }}
