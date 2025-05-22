@@ -113,3 +113,4 @@ jobs:
         # Applies the infrastructure changes based on the downloaded planfile.
         # The 'public_key' variable is passed again to ensure consistency during apply.
         run: terraform apply -input=false -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}" planfile
+        
