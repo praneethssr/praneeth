@@ -72,7 +72,7 @@ jobs:
         if: success() # Only upload if the plan step was successful
         with:
           name: terraform-artifacts-${{ github.run_id }} # Creates a unique name for the artifact bundle
-          # Paths are now relative to the 'working-directory' set for this action
+          # Paths are relative to the repository root (GITHUB_WORKSPACE)
           path: |
             planfile                # Path relative to the working-directory of this action
             .terraform.lock.hcl     # Path relative to the working-directory of this action
