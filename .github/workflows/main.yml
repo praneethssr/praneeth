@@ -3,39 +3,40 @@ name: Terraform Deployment
 on:
   push:
     branches:
-      - main  # or your default branch
+      - main
   pull_request:
+    branches:
+      - main
 
 jobs:
   terraform:
-    name: Apply Terraform
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.7.0 # change to your version
+          terraform_version: 1.7.0
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1 # or your region
+          aws-region: ap-south-1
 
       - name: Terraform Init
-        run: terraform init
+        run: cd cicdtf && terraform init -reconfigure
 
       - name: Terraform Validate
-        run: terraform validate
+        run: cd cicdtf && terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: cd cicdtf && terraform plan -out=tfplan
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
+        run: cd cicdtf && terraform apply -auto-approve tfplan
