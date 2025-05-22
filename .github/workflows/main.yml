@@ -72,12 +72,13 @@ jobs:
         if: success() # Only upload if the plan step was successful
         with:
           name: terraform-artifacts-${{ github.run_id }} # Creates a unique name for the artifact bundle
-          # Paths are relative to the repository root (GITHUB_WORKSPACE)
+          # Paths are now explicitly relative to the repository root (GITHUB_WORKSPACE)
           path: |
-            planfile                # Path relative to the working-directory of this action
-            .terraform.lock.hcl     # Path relative to the working-directory of this action
+            cicdtf/planfile                # Path to the generated planfile within the working directory
+            cicdtf/.terraform.lock.hcl     # Path to the dependency lock file within the working directory
           retention-days: 1 # Retain artifacts for 1 day (adjust as needed)
-        working-directory: cicdtf # <--- IMPORTANT: This tells the 'upload-artifact' action to look inside 'cicdtf' for the files
+        # Removed 'working-directory: cicdtf' from this step to rely on explicit paths from repo root,
+        # as the 'path' itself is now fully qualified from the repository root.
 
   # This job automatically applies the Terraform plan if the 'terraform' job succeeds.
   apply:
