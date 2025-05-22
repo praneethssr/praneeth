@@ -1,12 +1,13 @@
 # provider "aws" {
 #   region = var.aws_region # Retrieves the region from cicdtf/variables.tf
 # }
-
 # Backend configuration for Terraform state management.
 # This tells Terraform to store its state in an S3 bucket for collaborative use and durability.
 terraform {
   backend "s3" {
-    bucket         = "your-unique-terraform-state-bucket-name" # <<== IMPORTANT: REPLACE WITH YOUR ACTUAL S3 BUCKET NAME
+    bucket         = "terraform-state-ssr123-ap-south-1" # <<== IMPORTANT: REPLACE WITH YOUR ACTUAL S3 BUCKET NAME
+    # NOTE: The S3 bucket specified above must be created manually in your AWS account
+    # before running 'terraform init'. Terraform does not create this bucket automatically.
     key            = "cicdtf/terraform.tfstate"                 # Path to your state file within the bucket
     region         = "ap-south-1"                               # Must match your AWS_DEFAULT_REGION
     encrypt        = true                                       # Ensures state file is encrypted at rest
