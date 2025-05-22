@@ -83,4 +83,4 @@ jobs:
         run: terraform init -reconfigure
 
       - name: Terraform Apply
-        run: terraform apply -input=false -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}" planfile
+        run: terraform apply -input=false planfile
