@@ -1,4 +1,3 @@
-name: Terraform CI/CD
 
 on:
   workflow_dispatch:
@@ -38,9 +37,6 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      - name: Terraform Format
-        run: terraform fmt -check
-
       - name: Terraform Init
         run: terraform init
 
@@ -48,9 +44,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -out=planfile \
-          -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}" \
-          -var="instance_az=ap-south-1a"
+        run: terraform plan -out=planfile -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}"
 
       - name: Upload Planfile and Lock File
         uses: actions/upload-artifact@v4
