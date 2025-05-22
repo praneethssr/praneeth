@@ -44,26 +44,20 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # Create the public key file from GitHub Secret for Terraform to read
-      - name: Create Public Key File
-        run: |
-          echo "${{ secrets.TF_PUBLIC_KEY_CONTENT }}" > public_key_from_secret.pub
-          chmod 600 public_key_from_secret.pub
-          ls -la public_key_from_secret.pub # Verify file creation
-        working-directory: cicdtf # Ensure this runs in the Terraform working directory
-
       - name: Terraform Init
         # Initializes Terraform, configuring the backend for state management
-        # This also generates or updates the .terraform.lock.hcl file
-        run: terraform init -backend-config="tfstate.config" -migrate-state
+        # Note: If you have a `backend` block directly in main.tf, the -backend-config is redundant
+        # If your backend config is solely in main.tf, you can simplify this to: `terraform init`
+        run: terraform init
 
       - name: Terraform Validate
         # Validates the Terraform configuration files
         run: terraform validate
 
       - name: Terraform Plan
-        # Generates an execution plan and saves it to 'planfile'
-        run: terraform plan -out=planfile
+        # Generates an execution plan and saves it to 'planfile'.
+        # The 'public_key' variable is passed directly using -var.
+        run: terraform plan -out=planfile -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}"
 
       - name: Upload Planfile and Lock File
         # Uploads both the generated planfile and the .terraform.lock.hcl file
@@ -94,13 +88,6 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # Create the public key file from GitHub Secret for Terraform to read in the apply job too
-      - name: Create Public Key File
-        run: |
-          echo "${{ secrets.TF_PUBLIC_KEY_CONTENT }}" > public_key_from_secret.pub
-          chmod 600 public_key_from_secret.pub
-        working-directory: cicdtf
-
       - name: Download Planfile and Lock File
         # Downloads both the planfile and the .terraform.lock.hcl file
         uses: actions/download-artifact@v4
@@ -111,8 +98,10 @@ jobs:
       - name: Terraform Init (in Apply Job)
         # Re-initializes Terraform in the apply job to ensure consistency with the downloaded lock file.
         # -reconfigure forces Terraform to forget any previous configuration and re-read it.
-        run: terraform init -reconfigure -backend-config="tfstate.config" -migrate-state
+        # As with the plan job, if backend is in main.tf, `terraform init` is sufficient.
+        run: terraform init -reconfigure
 
       - name: Terraform Apply
         # Applies the infrastructure changes based on the downloaded planfile.
-        run: terraform apply -input=false planfile
+        # The 'public_key' variable is passed directly using -var.
+        run: terraform apply -input=false -var="public_key=${{ secrets.TF_PUBLIC_KEY_CONTENT }}" planfile
