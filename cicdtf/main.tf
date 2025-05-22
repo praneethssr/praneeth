@@ -32,7 +32,8 @@ module "vpc" {
 variable "public_key" {
   description = "The SSH public key content for the EC2 Key Pair."
   type        = string
-  default     = file("C:\\Users\\admin\\.ssh\\my-deployer-key.pub")
+  # Removed: default = file("C:\\Users\\admin\\.ssh\\my-deployer-key.pub")
+  # The public_key should be provided via a .tfvars file, CLI, or environment variable (e.g., TF_VAR_public_key in CI/CD).
 }
 
 # --------------------------
