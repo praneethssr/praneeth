@@ -50,10 +50,6 @@ module "ec2" {
 # The AWS provider configuration and backend configuration would typically
 # be in separate files (e.g., provider.tf and backend.tf) or directly in this main.tf.
 # For simplicity, if not using separate files:
-provider "aws" {
-  region = var.aws_region # Assuming this comes from cicdtf/variables.tf
-}
-
 # Backend configuration example
 terraform {
   backend "s3" {
