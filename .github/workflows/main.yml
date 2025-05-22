@@ -1,77 +1,46 @@
-terraform {
-  required_version = ">= 1.0"
+name: Terraform Deployment
 
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-  }
-}
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
-# AWS Provider
-# Defines the cloud provider and the region for resource deployment.
-# provider "aws" { # This line is now uncommented
-#   region = "ap-south-1"
-# }
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
 
-# --------------------------
-# VPC Module
-# --------------------------
-module "vpc" {
-  source       = "./modules/vpc"
-  cidr_block   = "10.0.0.0/16"
-  vpc_name     = "my-app-vpc"
-  subnet_cidr  = "10.0.1.0/24"
-  az           = "ap-south-1a"
-  subnet_name  = "main-public-subnet"
-}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-# --------------------------
-# SSH Public Key variable
-# --------------------------
-variable "public_key" {
-  description = "The SSH public key content for the EC2 Key Pair."
-  type        = string
-  # Removed: default = file("C:\\Users\\admin\\.ssh\\my-deployer-key.pub")
-  # The public_key should be provided via a .tfvars file, CLI, or environment variable (e.g., TF_VAR_public_key in CI/CD).
-}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
 
-# --------------------------
-# AWS Key Pair Resource
-# --------------------------
-resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key"
-  public_key = var.public_key
-}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
 
-# --------------------------
-# AWS AMI Data Source
-# --------------------------
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-  owners      = ["amazon"]
+      - name: Terraform Init
+        run: cd cicdtf && terraform init -reconfigure
 
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
+      - name: Terraform Validate
+        run: cd cicdtf && terraform validate
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
+      - name: Terraform Plan
+        run: cd cicdtf && terraform plan -out=tfplan
+        env: # Pass the public_key as an environment variable
+          TF_VAR_public_key: ${{ secrets.AWS_PUBLIC_KEY }} # Using your specified secret name
 
-# --------------------------
-# EC2 Module
-# --------------------------
-module "ec2" {
-  source         = "./modules/ec2"
-  ami            = data.aws_ami.amazon_linux_2.id
-  instance_type  = "t2.micro"
-  key_name       = aws_key_pair.deployer_key.key_name
-  instance_name  = "MyEC2Instance"
-  vpc_id         = module.vpc.vpc_id
-  subnet_id      = module.vpc.public_subnet_id
-}
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: cd cicdtf && terraform apply -auto-approve tfplan
+        env: # Pass the public_key as an environment variable for apply as well
+          TF_VAR_public_key: ${{ secrets.AWS_PUBLIC_KEY }} # Using your specified secret name
