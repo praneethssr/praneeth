@@ -58,7 +58,7 @@ variable "public_key" {
 # via the 'public_key' variable.
 resource "aws_key_pair" "deployer_key" {
   key_name   = "my-deployer-key" # Name of the key pair in AWS
-  public_key = var.public_key    # Content of the public key
+  public_key = AWS_PUBLIC_KEY    # Content of the public key
 }
 
 # EC2 Module Call
@@ -73,5 +73,5 @@ module "ec2" {
   vpc_id        = module.vpc.vpc_id # ID of the VPC created by the 'vpc' module
   subnet_id     = module.vpc.public_subnet_id # ID of the public subnet from the 'vpc' module
 
-  public_key    = var.public_key    # pass it as 'public_key'
+  public_key    = AWS_PBULIC_KEY    # pass it as 'public_key'
 }
