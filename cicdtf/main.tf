@@ -14,6 +14,22 @@ terraform {
 
 # --------------------------
 # SSH Public Key Variable
+# (You are missing the variable "public_key" declaration here!)
+# You need this:
+variable "public_key" {
+  description = "The SSH public key content for the EC2 Key Pair."
+  type        = string
+  sensitive   = true
+}
+
+# You are also missing the aws_key_pair resource block here.
+# Add this back if you want Terraform to manage your key pair:
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "my-deployer-key"
+  public_key = var.public_key
+}
+
+
 # --------------------------
 # VPC Module
 # --------------------------
@@ -60,17 +76,6 @@ module "ec2" {
 # --------------------------
 # Outputs for convenience
 # --------------------------
-<<<<<<< HEAD
-# output "ec2_public_ip" {
-#   description = "The public IP address of the created EC2 instance."
-#   value       = module.ec2.instance_public_ip
-# }
-
-# output "ec2_private_ip" {
-#   description = "The private IP address of the created EC2 instance."
-#   value       = module.ec2.instance_private_ip
-# }
-=======
 output "ec2_public_ip" {
   description = "The public IP address of the created EC2 instance."
   value       = module.ec2.instance_public_ip
