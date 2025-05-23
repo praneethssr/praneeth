@@ -13,12 +13,13 @@ variable "public_key" {
   type        = string
   sensitive   = true
 }
-
-resource "aws_key_pair" "my-deployer-key" {
-  key_name   = "my-deployer-key.pub"
-  public_key = var.public_key.id
+# --------------------------
+# AWS Key Pair Resource
+# --------------------------
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "my-deployer-key" # This is the NAME of the key pair in AWS
+  public_key = var.public_key   # This provides the CONTENT of your public key from the variable
 }
-
 module "vpc" {
   source       = "./modules/vpc"
   cidr_block   = "10.0.0.0/16"
