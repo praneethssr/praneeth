@@ -22,7 +22,3 @@ variable "subnet_name" {
   description = "The name of the public subnet."
   type        = string
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> f458e3199351657429f857c20a630cada0c938e7
