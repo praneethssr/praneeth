@@ -1,36 +1,22 @@
-resource "aws_security_group" "ec2_sg" {
-  name_prefix = "${var.instance_name}-sg-"
-  description = "Allow SSH inbound traffic"
-  vpc_id      = var.vpc_id
+# modules/ec2/main.tf (or modules/ec2/outputs.tf if you have a separate file)
 
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+# ... (rest of your aws_instance.web resource configuration above) ...
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.instance_name}-sg"
-  }
+# --------------------------
+# EC2 Outputs
+# --------------------------
+output "instance_public_ip" {
+  description = "The public IP address of the EC2 instance."
+  value       = aws_instance.web.public_ip  # <<< CORRECTED: Reference aws_instance.web
 }
 
-resource "aws_instance" "ec2_instance" {
-  ami                    = var.ami
-  instance_type          = var.instance_type
-  subnet_id              = var.subnet_id
-  key_name               = var.key_name
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+output "instance_private_ip" {
+  description = "The private IP address of the EC2 instance."
+  value       = aws_instance.web.private_ip # <<< CORRECTED: Reference aws_instance.web
+}
 
-  tags = {
-    Name = var.instance_name
-  }
+# (If you had an "instance_id" output, correct it similarly)
+output "instance_id" {
+  description = "The ID of the EC2 instance."
+  value       = aws_instance.web.id       # <<< CORRECTED: Reference aws_instance.web
 }
