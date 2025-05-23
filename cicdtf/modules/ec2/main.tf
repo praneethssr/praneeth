@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # modules/ec2/main.tf (or modules/ec2/outputs.tf if you have a separate file)
 
 # ... (rest of your aws_instance.web resource configuration above) ...
@@ -56,7 +56,6 @@ resource "aws_instance" "web" {
   tags = {
     Name = var.instance_name
   }
->>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
 }
 
 # (If you had an "instance_id" output, correct it similarly)
