@@ -8,9 +8,9 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = "ap-south-1" # Set your desired AWS region here
-}
+# provider "aws" {
+#   region = "ap-south-1" # Set your desired AWS region here
+# }
 
 # --------------------------
 # SSH Public Key Variable
