@@ -22,8 +22,8 @@ variable "public_key" {
 # AWS EC2 Key Pair Resource (REQUIRED for aws_key_pair.deployer_key)
 # --------------------------
 resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key" # Name your key pair in AWS
-  public_key = var.public_key   # Uses the public_key variable defined above
+  key_name   = "my-deployer-key"
+  public_key = file("C:/Users/admin/.ssh/my-deployer-key.pub")
 }
 
 # --------------------------
