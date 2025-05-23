@@ -1,4 +1,3 @@
-
 # modules/ec2/main.tf
 
 # --------------------------
@@ -28,11 +27,15 @@ resource "aws_security_group" "instance_sg" {
     Name = "${var.instance_name}-sg"
   }
 }
+
+# --------------------------
+# EC2 Instance Resource
+# --------------------------
 resource "aws_instance" "web" {
-  ami                    = var.ami
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  subnet_id              = var.subnet_id
+  ami           = var.ami
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  subnet_id     = var.subnet_id
   vpc_security_group_ids = [aws_security_group.instance_sg.id]
 
   tags = {

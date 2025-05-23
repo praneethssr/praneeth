@@ -10,25 +10,25 @@ terraform {
   }
 }
 
-# provider "aws" {
-#   region = "ap-south-1" # Ensure this is set to your desired AWS region
-# }
+provider "aws" {
+  region = "ap-south-1" # Ensure this is set to your desired AWS region
+}
 
 # --------------------------
-# SSH Public Key Variable (Must be declared before used)
+# SSH Public Key Variable
 # --------------------------
 variable "public_key" {
   description = "The SSH public key content for the EC2 Key Pair."
   type        = string
-  sensitive   = true # This is good practice
+  sensitive   = true
 }
 
 # --------------------------
-# AWS Key Pair Resource (Must be declared before used by EC2 module)
+# AWS EC2 Key Pair Resource
 # --------------------------
 resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key" # Name the key pair in AWS
-  public_key = var.public_key   # This *must* reference the variable
+  key_name   = "my-deployer-key" # Name your key pair in AWS
+  public_key = var.public_key   # This references the variable
 }
 
 # --------------------------
@@ -36,25 +36,23 @@ resource "aws_key_pair" "deployer_key" {
 # --------------------------
 module "vpc" {
   source       = "./modules/vpc"
-  # These are needed if your VPC module expects them.
-  # Based on your modules/vpc/variables.tf, these should be here.
   cidr_block   = "10.0.0.0/16"
   vpc_name     = "my-app-vpc"
   subnet_cidr  = "10.0.1.0/24"
-  az           = "ap-south-1a" # Ensure this AZ is valid for your chosen region (ap-south-1)
+  az           = "ap-south-1a" # Ensure this AZ is valid for your chosen region
   subnet_name  = "main-public-subnet"
 }
 
 # --------------------------
-# AWS AMI Data Source (Must be declared before used by EC2 module)
+# AWS AMI Data Source
 # --------------------------
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
-  owners      = ["amazon"] # Official Amazon AMIs
+  owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"] # Filters for Amazon Linux 2 AMI
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 
   filter {
@@ -68,18 +66,18 @@ data "aws_ami" "amazon_linux_2" {
 # --------------------------
 module "ec2" {
   source         = "./modules/ec2"
-  # These are inputs required by your modules/ec2/variables.tf
   ami            = data.aws_ami.amazon_linux_2.id
-  instance_type  = "t2.micro" # Free tier eligible instance type
+  instance_type  = "t2.micro"
   key_name       = aws_key_pair.deployer_key.key_name
-  instance_name  = "MyEC2Instance" # A name for your EC2 instance
-  vpc_id         = module.vpc.vpc_id # Pass VPC ID from the VPC module
-  subnet_id      = module.vpc.public_subnet_id # Pass subnet ID from the VPC module
+  instance_name  = "MyEC2Instance"
+  vpc_id         = module.vpc.vpc_id
+  subnet_id      = module.vpc.public_subnet_id
 }
 
 # --------------------------
-# Web Module (assuming it exists and you want it)
+# Web Module (placeholder)
 # Add required inputs here if it needs any.
+# For now, ensure the module directory and its main.tf are valid.
 # --------------------------
 module "web" {
   source = "./modules/web"

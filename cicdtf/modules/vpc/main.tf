@@ -1,3 +1,5 @@
+# modules/vpc/main.tf
+
 # --------------------------
 # VPC Resource
 # --------------------------
@@ -12,18 +14,7 @@ resource "aws_vpc" "main" {
 }
 
 # --------------------------
-# Internet Gateway Resource
-# --------------------------
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "${var.vpc_name}-igw"
-  }
-}
-
-# --------------------------
-# Public Subnet Resource
+# Public Subnet
 # --------------------------
 resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.main.id
@@ -37,13 +28,24 @@ resource "aws_subnet" "public" {
 }
 
 # --------------------------
+# Internet Gateway
+# --------------------------
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "${var.vpc_name}-igw"
+  }
+}
+
+# --------------------------
 # Route Table for Public Subnet
 # --------------------------
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block = "0.0.0.0/0" # Allow all outbound traffic
+    cidr_block = "0.0.0.0/0" # Route all outbound traffic to the internet gateway
     gateway_id = aws_internet_gateway.gw.id
   }
 
