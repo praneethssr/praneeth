@@ -1,44 +1,18 @@
-# modules/ec2/main.tf
+# Your root main.tf (e.g., cicdtf/main.tf)
+
+# ... (other code in your root main.tf) ...
 
 # --------------------------
-# Security Group for EC2
+# EC2 Module
 # --------------------------
-resource "aws_security_group" "instance_sg" {
-  name        = "${var.instance_name}-sg"
-  description = "Allow SSH inbound traffic"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    description = "SSH from anywhere"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1" # All protocols
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.instance_name}-sg"
-  }
+module "ec2" {
+  source         = "./modules/ec2" # Path to your EC2 module
+  ami            = data.aws_ami.amazon_linux_2.id
+  instance_type  = "t2.micro"
+  key_name       = aws_key_pair.deployer_key.key_name
+  instance_name  = "MyEC2Instance" # <--- ADD/ENSURE THIS LINE EXISTS
+  vpc_id         = module.vpc.vpc_id # <--- ADD/ENSURE THIS LINE EXISTS
+  subnet_id      = module.vpc.public_subnet_id
 }
 
-# --------------------------
-# EC2 Instance Resource
-# --------------------------
-resource "aws_instance" "web" {
-  ami           = var.ami
-  instance_type = var.instance_type
-  key_name      = var.key_name
-  subnet_id     = var.subnet_id
-  vpc_security_group_ids = [aws_security_group.instance_sg.id]
-
-  tags = {
-    Name = var.instance_name
-  }
-}
+# ... (other code in your root main.tf) ...
