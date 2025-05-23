@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 
+=======
+# modules/ec2/main.tf
+
+# --------------------------
+# Security Group for EC2
+# --------------------------
+>>>>>>> f458e3199351657429f857c20a630cada0c938e7
 resource "aws_security_group" "instance_sg" {
   name        = "${var.instance_name}-sg"
   description = "Allow SSH inbound traffic"
