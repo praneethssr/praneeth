@@ -1,3 +1,5 @@
+# cicdtf/main.tf
+
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -8,33 +10,34 @@ terraform {
   }
 }
 
-# The 'provider' block is usually here, ensure it's not commented out
 # provider "aws" {
-#   region = "ap-south-1" # Set your desired AWS region here
+#   region = "ap-south-1" # Ensure this is set to your desired AWS region
 # }
 
 # --------------------------
-# SSH Public Key Variable
+# SSH Public Key Variable (Must be declared before used)
 # --------------------------
 variable "public_key" {
   description = "The SSH public key content for the EC2 Key Pair."
   type        = string
-  sensitive   = true # It's good practice to mark sensitive variables
+  sensitive   = true # This is good practice
 }
 
 # --------------------------
-# AWS Key Pair Resource
+# AWS Key Pair Resource (Must be declared before used by EC2 module)
 # --------------------------
 resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key" # This is the NAME of the key pair in AWS
-  public_key = var.public_key   # This provides the CONTENT of your public key from the variable
+  key_name   = "my-deployer-key" # Name the key pair in AWS
+  public_key = var.public_key   # This *must* reference the variable
 }
 
 # --------------------------
 # VPC Module
 # --------------------------
 module "vpc" {
-  source       = "./modules/vpc" # Path to your VPC module
+  source       = "./modules/vpc"
+  # These are needed if your VPC module expects them.
+  # Based on your modules/vpc/variables.tf, these should be here.
   cidr_block   = "10.0.0.0/16"
   vpc_name     = "my-app-vpc"
   subnet_cidr  = "10.0.1.0/24"
@@ -43,7 +46,7 @@ module "vpc" {
 }
 
 # --------------------------
-# AWS AMI Data Source
+# AWS AMI Data Source (Must be declared before used by EC2 module)
 # --------------------------
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
@@ -64,17 +67,29 @@ data "aws_ami" "amazon_linux_2" {
 # EC2 Module
 # --------------------------
 module "ec2" {
-  source         = "./modules/ec2" # Path to your EC2 module
+  source         = "./modules/ec2"
+  # These are inputs required by your modules/ec2/variables.tf
   ami            = data.aws_ami.amazon_linux_2.id
   instance_type  = "t2.micro" # Free tier eligible instance type
   key_name       = aws_key_pair.deployer_key.key_name
-  instance_name  = "MyEC2Instance" # Name for the EC2 instance
+  instance_name  = "MyEC2Instance" # A name for your EC2 instance
   vpc_id         = module.vpc.vpc_id # Pass VPC ID from the VPC module
   subnet_id      = module.vpc.public_subnet_id # Pass subnet ID from the VPC module
 }
 
 # --------------------------
-# Outputs for convenience (assuming you want these at the root level)
+# Web Module (assuming it exists and you want it)
+# Add required inputs here if it needs any.
+# --------------------------
+module "web" {
+  source = "./modules/web"
+  # Example: If your web module needs the EC2 instance ID or IP
+  # instance_id = module.ec2.instance_id
+  # instance_public_ip = module.ec2.instance_public_ip
+}
+
+# --------------------------
+# Outputs for convenience
 # --------------------------
 output "ec2_public_ip" {
   description = "The public IP address of the created EC2 instance."
