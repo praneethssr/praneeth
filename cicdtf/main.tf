@@ -9,63 +9,36 @@ terraform {
 }
 
 # provider "aws" {
-#   region = "ap-south-1" # Set your desired AWS region here
+#   region = "ap-south-1"
 # }
 
-# --------------------------
-# SSH Public Key Variable
-<<<<<<< HEAD
-# This is where Terraform will ask for your key content.
-# --------------------------
 variable "public_key" {
-  description = "The SSH public key content for the EC2 Key Pair. Example: 'ssh-ed25519 AAAA... user@example.com'"
-=======
-# --------------------------
-variable "public_key" {
-  description = "The SSH public key content for the EC2 Key Pair. Example: 'ssh-rsa AAAAB3Nz... user@example.com'"
->>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
+  description = "The SSH public key content for the EC2 Key Pair."
   type        = string
-  sensitive   = true # Mark as sensitive to prevent it from being shown in logs
+  sensitive   = true
 }
 
-# --------------------------
-# AWS Key Pair Resource
-<<<<<<< HEAD
-# This resource uses the public_key variable.
-# --------------------------
 resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key" # Name of the SSH key pair in AWS
-  public_key = var.public_key   # This now correctly references the variable
-=======
-# --------------------------
-resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key" # Name of the SSH key pair in AWS
+  key_name   = "my-deployer-key.pub"
   public_key = var.public_key
->>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
 }
 
-# --------------------------
-# VPC Module
-# --------------------------
 module "vpc" {
-  source       = "./modules/vpc" # Path to your VPC module
+  source       = "./modules/vpc"
   cidr_block   = "10.0.0.0/16"
   vpc_name     = "my-app-vpc"
   subnet_cidr  = "10.0.1.0/24"
-  az           = "ap-south-1a" # Ensure this AZ is valid for your chosen region (ap-south-1)
+  az           = "ap-south-1a"
   subnet_name  = "main-public-subnet"
 }
 
-# --------------------------
-# AWS AMI Data Source
-# --------------------------
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
-  owners      = ["amazon"] # Official Amazon AMIs
+  owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"] # Filters for Amazon Linux 2 AMI
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 
   filter {
@@ -74,40 +47,12 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# --------------------------
-# EC2 Module
-# --------------------------
 module "ec2" {
-  source         = "./modules/ec2" # Path to your EC2 module
+  source         = "./modules/ec2"
   ami            = data.aws_ami.amazon_linux_2.id
-  instance_type  = "t2.micro" # Free tier eligible instance type
-  key_name       = aws_key_pair.deployer_key.key_name
+  instance_type  = "t2.micro"
+  key_name       = aws_key_pair.id
   instance_name  = "MyEC2Instance"
   vpc_id         = module.vpc.vpc_id
   subnet_id      = module.vpc.public_subnet_id
 }
-
-# --------------------------
-# Outputs for convenience
-# --------------------------
-<<<<<<< HEAD
-# output "ec2_public_ip" {
-#   description = "The public IP address of the created EC2 instance."
-#   value       = module.ec2.instance_public_ip
-# }
-
-# output "ec2_private_ip" {
-#   description = "The private IP address of the created EC2 instance."
-#   value       = module.ec2.instance_private_ip
-# }
-=======
-output "ec2_public_ip" {
-  description = "The public IP address of the created EC2 instance."
-  value       = module.ec2.instance_public_ip
-}
-
-output "ec2_private_ip" {
-  description = "The private IP address of the created EC2 instance."
-  value       = module.ec2.instance_private_ip
-}
->>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
