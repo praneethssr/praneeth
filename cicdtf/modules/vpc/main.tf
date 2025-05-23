@@ -60,18 +60,19 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-<<<<<<< HEAD
-# --------------------------
-# VPC Outputs
-# --------------------------
-# output "vpc_id" {
-#   description = "The ID of the VPC"
-#   value       = aws_vpc.main.id
-# }
+# <<<<<<< HEAD
+# # --------------------------
+# # VPC Outputs
+# # --------------------------
+# # output "vpc_id" {
+# #   description = "The ID of the VPC"
+# #   value       = aws_vpc.main.id
+# # }
 
-# output "public_subnet_id" {
-#   description = "The ID of the public subnet"
-#   value       = aws_subnet.public.id
-# }
-=======
->>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
+# # output "public_subnet_id" {
+# #   description = "The ID of the public subnet"
+# #   value       = aws_subnet.public.id
+# # }
+# =======
+# >>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
+
