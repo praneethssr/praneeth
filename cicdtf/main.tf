@@ -14,21 +14,34 @@ terraform {
 
 # --------------------------
 # SSH Public Key Variable
+<<<<<<< HEAD
 # This is where Terraform will ask for your key content.
 # --------------------------
 variable "public_key" {
   description = "The SSH public key content for the EC2 Key Pair. Example: 'ssh-ed25519 AAAA... user@example.com'"
+=======
+# --------------------------
+variable "public_key" {
+  description = "The SSH public key content for the EC2 Key Pair. Example: 'ssh-rsa AAAAB3Nz... user@example.com'"
+>>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
   type        = string
   sensitive   = true # Mark as sensitive to prevent it from being shown in logs
 }
 
 # --------------------------
 # AWS Key Pair Resource
+<<<<<<< HEAD
 # This resource uses the public_key variable.
 # --------------------------
 resource "aws_key_pair" "deployer_key" {
   key_name   = "my-deployer-key" # Name of the SSH key pair in AWS
   public_key = var.public_key   # This now correctly references the variable
+=======
+# --------------------------
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "my-deployer-key" # Name of the SSH key pair in AWS
+  public_key = var.public_key
+>>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
 }
 
 # --------------------------
@@ -77,6 +90,7 @@ module "ec2" {
 # --------------------------
 # Outputs for convenience
 # --------------------------
+<<<<<<< HEAD
 # output "ec2_public_ip" {
 #   description = "The public IP address of the created EC2 instance."
 #   value       = module.ec2.instance_public_ip
@@ -86,3 +100,14 @@ module "ec2" {
 #   description = "The private IP address of the created EC2 instance."
 #   value       = module.ec2.instance_private_ip
 # }
+=======
+output "ec2_public_ip" {
+  description = "The public IP address of the created EC2 instance."
+  value       = module.ec2.instance_public_ip
+}
+
+output "ec2_private_ip" {
+  description = "The private IP address of the created EC2 instance."
+  value       = module.ec2.instance_private_ip
+}
+>>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a

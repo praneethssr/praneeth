@@ -1,4 +1,5 @@
 # --------------------------
+<<<<<<< HEAD
 # Security Group for EC2
 # --------------------------
 resource "aws_security_group" "instance_sg" {
@@ -46,3 +47,16 @@ resource "aws_instance" "web" {
 # EC2 Outputs
 # These outputs correctly reference the "aws_instance.web" resource.
 # --------------------------
+=======
+# EC2 Outputs
+# --------------------------
+output "instance_public_ip" {
+  description = "The public IP address of the EC2 instance"
+  value       = aws_instance.web.public_ip
+}
+
+output "instance_private_ip" {
+  description = "The private IP address of the EC2 instance"
+  value       = aws_instance.web.private_ip
+}
+>>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a

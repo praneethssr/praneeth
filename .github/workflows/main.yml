@@ -36,11 +36,11 @@ jobs:
 
       - name: Terraform Plan
         run: cd cicdtf && terraform plan -out=tfplan
-        env:
-          TF_VAR_public_key: ${{ secrets.AWS_PUBLIC_KEY }}
+        env: # Pass the public_key as an environment variable
+          TF_VAR_public_key: ${{ secrets.AWS_PUBLIC_KEY }} # Using your specified secret name
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: cd cicdtf && terraform apply -auto-approve tfplan
-        env:
-          TF_VAR_public_key: ${{ secrets.AWS_PUBLIC_KEY }}
+        env: # Pass the public_key as an environment variable for apply as well
+          TF_VAR_public_key: ${{ secrets.AWS_PUBLIC_KEY }} # Using your specified secret name
