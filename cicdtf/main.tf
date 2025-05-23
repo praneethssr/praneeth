@@ -1,87 +1,44 @@
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-  }
-}
-
-# provider "aws" {
-#   region = "ap-south-1" # Set your desired AWS region here
-# }
+# modules/ec2/main.tf
 
 # --------------------------
-# SSH Public Key Variable
-# (You are missing the variable "public_key" declaration here!)
-# You need this:
-variable "public_key" {
-  description = "The SSH public key content for the EC2 Key Pair."
-  type        = string
-  sensitive   = true
-}
-
-# You are also missing the aws_key_pair resource block here.
-# Add this back if you want Terraform to manage your key pair:
-resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key"
-  public_key = var.public_key
-}
-
-
+# Security Group for EC2
 # --------------------------
-# VPC Module
-# --------------------------
-module "vpc" {
-  source       = "./modules/vpc" # Path to your VPC module
-  cidr_block   = "10.0.0.0/16"
-  vpc_name     = "my-app-vpc"
-  subnet_cidr  = "10.0.1.0/24"
-  az           = "ap-south-1a" # Ensure this AZ is valid for your chosen region (ap-south-1)
-  subnet_name  = "main-public-subnet"
-}
+resource "aws_security_group" "instance_sg" {
+  name        = "${var.instance_name}-sg"
+  description = "Allow SSH inbound traffic"
+  vpc_id      = var.vpc_id
 
-# --------------------------
-# AWS AMI Data Source
-# --------------------------
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-  owners      = ["amazon"] # Official Amazon AMIs
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"] # Filters for Amazon Linux 2 AMI
+  ingress {
+    description = "SSH from anywhere"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1" # All protocols
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.instance_name}-sg"
   }
 }
 
 # --------------------------
-# EC2 Module
+# EC2 Instance Resource
 # --------------------------
-module "ec2" {
-  source         = "./modules/ec2" # Path to your EC2 module
-  ami            = data.aws_ami.amazon_linux_2.id
-  instance_type  = "t2.micro" # Free tier eligible instance type
-  key_name       = aws_key_pair.deployer_key.key_name
-  instance_name  = "MyEC2Instance"
-  vpc_id         = module.vpc.vpc_id
-  subnet_id      = module.vpc.public_subnet_id
-}
+resource "aws_instance" "web" {
+  ami           = var.ami
+  instance_type = var.instance_type
+  key_name      = var.key_name
+  subnet_id     = var.subnet_id
+  vpc_security_group_ids = [aws_security_group.instance_sg.id]
 
-# --------------------------
-# Outputs for convenience
-# --------------------------
-output "ec2_public_ip" {
-  description = "The public IP address of the created EC2 instance."
-  value       = module.ec2.instance_public_ip
-}
-
-output "ec2_private_ip" {
-  description = "The private IP address of the created EC2 instance."
-  value       = module.ec2.instance_private_ip
+  tags = {
+    Name = var.instance_name
+  }
 }
