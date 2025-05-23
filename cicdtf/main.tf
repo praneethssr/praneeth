@@ -9,15 +9,6 @@ terraform {
     }
   }
 }
-
------ comment code ------
-provider "aws" {
-
-  region = "ap-south-1" # Ensure this is set to your desired AWS region
-
-}
------ comment code ------
-
 # --------------------------
 # SSH Public Key Variable (REQUIRED for aws_key_pair)
 # --------------------------
