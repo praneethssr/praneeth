@@ -1,5 +1,4 @@
 # --------------------------
-<<<<<<< HEAD
 # Security Group for EC2
 # --------------------------
 resource "aws_security_group" "instance_sg" {
@@ -59,4 +58,4 @@ output "instance_private_ip" {
   description = "The private IP address of the EC2 instance"
   value       = aws_instance.web.private_ip
 }
->>>>>>> d2309e1256bce4d47c67cb4f0c3b3561f22e957a
+
