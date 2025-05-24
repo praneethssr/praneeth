@@ -87,6 +87,11 @@ module "web" {
   # instance_id = module.ec2.instance_id
   # instance_public_ip = module.ec2.instance_public_ip
 }
+# THIS IS LIKELY INSIDE modules/web/main.tf OR ANOTHER FILE IN THAT DIRECTORY
+module "some_nested_module" {
+  source = "./modules/..." # Relative path from modules/web/
+  # ...
+}
 
 # --------------------------
 # Outputs for convenience
