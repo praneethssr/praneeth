@@ -1,49 +1,42 @@
-# cicdtf/modules/vpc/main.tf
+# This file is located in the 'cicdtf/modules/vpc/' directory.
 
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr_block # Uses var.vpc_cidr_block
+resource "aws_vpc" "myvpc" {
+  cidr_block           = var.vpc_cidr_block # Using variable
   enable_dns_hostnames = true
   enable_dns_support   = true
 
   tags = {
-    Name = var.vpc_name
+    Name = var.vpc_name # Using variable
   }
 }
 
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr # Uses var.public_subnet_cidr
-  map_public_ip_on_launch = true # Instances in this subnet get a public IP
-
-  availability_zone = "${var.aws_region}a" # Uses var.aws_region
+resource "aws_subnet" "pb_sn" {
+  vpc_id                  = aws_vpc.myvpc.id
+  cidr_block              = var.public_subnet_cidr # Using variable
+  availability_zone       = var.availability_zone # Using variable
+  map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.vpc_name}-public-subnet" # Constructs name using var.vpc_name
+    Name = "${var.vpc_name}-public-subnet" # Consistent naming
   }
 }
 
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.main.id
+resource "aws_security_group" "sg" {
+  vpc_id      = aws_vpc.myvpc.id
+  name        = "${var.vpc_name}-sg" # Consistent naming
+  description = "Security Group for ${var.vpc_name}"
 
-  tags = {
-    Name = "${var.vpc_name}-igw"
-  }
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0" # Allow all outbound traffic
-    gateway_id = aws_internet_gateway.gw.id
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.vpc_name}-public-rt"
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-}
-
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
 }

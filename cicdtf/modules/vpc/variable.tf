@@ -1,4 +1,4 @@
-# cicdtf/modules/vpc/variables.tf
+# This file is located in the 'cicdtf/modules/vpc/' directory.
 
 variable "vpc_cidr_block" {
   description = "The CIDR block for the VPC."
@@ -11,12 +11,11 @@ variable "public_subnet_cidr" {
 }
 
 variable "vpc_name" {
-  description = "Name tag for the VPC and its resources."
+  description = "The name tag for the VPC."
   type        = string
 }
 
-variable "aws_region" {
-  description = "AWS region for the VPC."
+variable "availability_zone" {
+  description = "The availability zone for the public subnet."
   type        = string
-  default     = "ap-south-1" # Default to ap-south-1, but can be overridden by root main.tf
 }
