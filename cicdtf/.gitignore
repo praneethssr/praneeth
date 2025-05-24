@@ -1,0 +1,14 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Crash log files
+crash.log
+
+# Specific to providers for some reason
+*.tfvars.json
+
+# Local .ssh directory (if present, keep private keys out!)
+.ssh/
