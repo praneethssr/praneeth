@@ -12,3 +12,8 @@ crash.log
 
 # Local .ssh directory (if present, keep private keys out!)
 .ssh/
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
