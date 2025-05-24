@@ -1,60 +1,26 @@
-# cicdtf/main.tf
-
 terraform {
-  required_version = ">= 1.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.0"
+      version = "~> 5.0" # Use a compatible AWS provider version
     }
   }
+  required_version = "~> 1.0" # Use a compatible Terraform version
 }
 
 # provider "aws" {
-#   region = "ap-south-1" # Ensure this is set to your desired AWS region
+#   region = var.aws_region
 # }
 
-# --------------------------
-# SSH Public Key Variable (Must be declared before used)
-# --------------------------
-variable "public_key" {
-  description = "The SSH public key content for the EC2 Key Pair."
-  type        = string
-  sensitive   = true # This is good practice
-}
-
-# --------------------------
-# AWS Key Pair Resource (Must be declared before used by EC2 module)
-# --------------------------
-resource "aws_key_pair" "deployer_key" {
-  key_name   = "my-deployer-key" # Name the key pair in AWS
-  public_key = var.public_key   # This *must* reference the variable
-}
-
-# --------------------------
-# VPC Module
-# --------------------------
-module "vpc" {
-  source       = "./modules/vpc"
-  # These are needed if your VPC module expects them.
-  # Based on your modules/vpc/variables.tf, these should be here.
-  cidr_block   = "10.0.0.0/16"
-  vpc_name     = "my-app-vpc"
-  subnet_cidr  = "10.0.1.0/24"
-  az           = "ap-south-1a" # Ensure this AZ is valid for your chosen region (ap-south-1)
-  subnet_name  = "main-public-subnet"
-}
-
-# --------------------------
-# AWS AMI Data Source (Must be declared before used by EC2 module)
-# --------------------------
+# --- Data Source for AMI (Amazon Linux 2) ---
+# This data source finds the latest Amazon Linux 2 AMI for your region
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
-  owners      = ["amazon"] # Official Amazon AMIs
+  owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"] # Filters for Amazon Linux 2 AMI
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 
   filter {
@@ -63,47 +29,49 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# --------------------------
-# EC2 Module
-# --------------------------
+# --- Key Pair for SSH Access ---
+# Ensure your TF_VAR_PUBLIC_KEY secret in GitHub Actions contains a valid OpenSSH public key.
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "my-deployer-key"
+  public_key = var.public_key # Comes from TF_VAR_public_key secret
+}
+
+
+# --- Module Calls ---
+
+# 1. VPC Module
+module "vpc" {
+  source = "./modules/vpc"
+
+  # VPC Configuration
+  vpc_cidr_block    = "10.0.0.0/16"
+  public_subnet_cidr = "10.0.1.0/24"
+  vpc_name          = "my-app-vpc"
+  aws_region        = var.aws_region # Pass the region to the VPC module
+}
+
+# 2. EC2 Instance Module
+# CORRECTED: Changed 'ami' to 'ami_id' to match the variable expected by the EC2 module.
 module "ec2" {
-  source         = "./modules/ec2"
-  # These are inputs required by your modules/ec2/variables.tf
-  ami            = data.aws_ami.amazon_linux_2.id
-  instance_type  = "t2.micro" # Free tier eligible instance type
-  key_name       = aws_key_pair.deployer_key.key_name
-  instance_name  = "MyEC2Instance" # A name for your EC2 instance
-  vpc_id         = module.vpc.vpc_id # Pass VPC ID from the VPC module
-  subnet_id      = module.vpc.public_subnet_id # Pass subnet ID from the VPC module
+  source = "./modules/ec2"
+
+  ami_id        = data.aws_ami.amazon_linux_2.id # Corrected argument name
+  instance_type = "t2.micro"
+  subnet_id     = module.vpc.public_subnet_id # Use the public subnet from the VPC module
+  key_name      = aws_key_pair.deployer_key.key_name
+  instance_name = "MyEC2Instance"
+  vpc_id        = module.vpc.vpc_id # Pass the VPC ID to the EC2 module for security group
 }
 
-# --------------------------
-# Web Module (assuming it exists and you want it)
-# Add required inputs here if it needs any.
-# --------------------------
-# In your root cicdtf/main.tf
+# 3. Web Server Module
 module "web" {
-  source             = "./modules/web"
-  ami_id             = data.aws_ami.amazon_linux_2.id # Or your desired AMI ID
-  instance_type      = "t2.micro" # Or your desired instance type
-  subnet_id          = module.vpc.public_subnet_id # Or your desired subnet ID
-  key_name           = aws_key_pair.deployer_key.key_name # Or your desired key name
-  instance_name      = "MyWebServer" # Or your desired instance name
-}
-# --------------------------
-# Outputs for convenience
-# --------------------------
-output "ec2_public_ip" {
-  description = "The public IP address of the created EC2 instance."
-  value       = module.ec2.instance_public_ip
-}
+  source = "./modules/web"
 
-output "ec2_private_ip" {
-  description = "The private IP address of the created EC2 instance."
-  value       = module.ec2.instance_private_ip
-}
-
-output "instance_id" {
-  description = "The ID of the created EC2 instance."
-  value       = module.ec2.instance_id
+  ami_id        = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
+  subnet_id     = module.vpc.public_subnet_id # Use the public subnet from the VPC module
+  key_name      = aws_key_pair.deployer_key.key_name
+  instance_name = "MyWebServer"
+  # You might want to pass vpc_id to the web module if it needs to create security groups etc.
+  # vpc_id        = module.vpc.vpc_id
 }
