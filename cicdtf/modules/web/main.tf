@@ -1,4 +1,4 @@
-# Corrected content of cicdtf/modules/web/main.tf
+# FINAL Corrected content of cicdtf/modules/web/main.tf
 
 # Example web server instance definition
 resource "aws_instance" "web_instance" {
@@ -11,20 +11,10 @@ resource "aws_instance" "web_instance" {
   }
 }
 
-# Corrected module call for "some_nested_module"
-# Assuming 'some_nested_module' is a sibling directory to 'web' in the 'modules' folder.
-# The path '../../some_nested_module_actual_directory' means:
-# 1. Go up one level from 'modules/web/' to 'modules/'
-# 2. Go up another level from 'modules/' to the project root 'cicdtf/'
-# 3. Go down into the 'modules/' directory
-# 4. Go into the 'some_nested_module_actual_directory' (replace with the actual name)
-module "some_nested_module" {
-  source = "../../some_nested_module_actual_directory" # <--- FIX THIS PATH
-  
-  # Add any required inputs for 'some_nested_module' here
-  # For example:
-  # input_variable_name = "some_value"
-}
+# The 'module "some_nested_module"' block HAS BEEN PERMANENTLY REMOVED from this file.
+# If you actually need a nested module here, you must add it back with a CORRECT and EXISTING source path,
+# e.g., source = "../../<your_actual_nested_module_name>"
+# and ensure that module definition truly exists in your project.
 
 # Output for the web instance ID
 output "web_instance_id" {
