@@ -1,4 +1,4 @@
-# Content for cicdtf/modules/web/variables.tf
+# cicdtf/modules/web/variables.tf
 
 variable "ami_id" {
   description = "The ID of the AMI to use for the web instance."

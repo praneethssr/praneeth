@@ -1,26 +1,22 @@
-# modules/vpc/variables.tf
+# cicdtf/modules/vpc/variables.tf
 
-variable "cidr_block" {
+variable "vpc_cidr_block" {
   description = "The CIDR block for the VPC."
   type        = string
 }
 
-variable "vpc_name" {
-  description = "The name tag for the VPC."
-  type        = string
-}
-
-variable "subnet_cidr" {
+variable "public_subnet_cidr" {
   description = "The CIDR block for the public subnet."
   type        = string
 }
 
-variable "az" {
-  description = "The availability zone for the public subnet."
+variable "vpc_name" {
+  description = "Name tag for the VPC and its resources."
   type        = string
 }
 
-variable "subnet_name" {
-  description = "The name tag for the public subnet."
+variable "aws_region" {
+  description = "AWS region for the VPC."
   type        = string
+  default     = "ap-south-1" # Default to ap-south-1, but can be overridden by root main.tf
 }

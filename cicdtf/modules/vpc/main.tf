@@ -1,10 +1,7 @@
-# modules/vpc/main.tf
+# cicdtf/modules/vpc/main.tf
 
-# --------------------------
-# VPC Resource
-# --------------------------
 resource "aws_vpc" "main" {
-  cidr_block = var.cidr_block
+  cidr_block           = var.vpc_cidr_block # Uses var.vpc_cidr_block
   enable_dns_hostnames = true
   enable_dns_support   = true
 
@@ -13,23 +10,18 @@ resource "aws_vpc" "main" {
   }
 }
 
-# --------------------------
-# Public Subnet
-# --------------------------
 resource "aws_subnet" "public" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.subnet_cidr
-  availability_zone = var.az
-  map_public_ip_on_launch = true # Automatically assign public IPs
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr # Uses var.public_subnet_cidr
+  map_public_ip_on_launch = true # Instances in this subnet get a public IP
+
+  availability_zone = "${var.aws_region}a" # Uses var.aws_region
 
   tags = {
-    Name = var.subnet_name
+    Name = "${var.vpc_name}-public-subnet" # Constructs name using var.vpc_name
   }
 }
 
-# --------------------------
-# Internet Gateway
-# --------------------------
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 
@@ -38,14 +30,11 @@ resource "aws_internet_gateway" "gw" {
   }
 }
 
-# --------------------------
-# Route Table for Public Subnet
-# --------------------------
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block = "0.0.0.0/0" # Route all outbound traffic to the internet gateway
+    cidr_block = "0.0.0.0/0" # Allow all outbound traffic
     gateway_id = aws_internet_gateway.gw.id
   }
 
@@ -54,9 +43,6 @@ resource "aws_route_table" "public" {
   }
 }
 
-# --------------------------
-# Route Table Association
-# --------------------------
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id

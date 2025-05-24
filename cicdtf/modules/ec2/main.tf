@@ -1,12 +1,9 @@
-# modules/ec2/main.tf
+# cicdtf/modules/ec2/main.tf
 
-# --------------------------
-# Security Group for EC2
-# --------------------------
 resource "aws_security_group" "instance_sg" {
   name        = "${var.instance_name}-sg"
   description = "Allow SSH inbound traffic"
-  vpc_id      = var.vpc_id
+  vpc_id      = var.vpc_id # Assuming VPC ID is passed from root module
 
   ingress {
     description = "SSH from anywhere"
@@ -16,10 +13,11 @@ resource "aws_security_group" "instance_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Allow all outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
-    protocol    = "-1" # All protocols
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -28,14 +26,12 @@ resource "aws_security_group" "instance_sg" {
   }
 }
 
-# --------------------------
-# EC2 Instance Resource
-# --------------------------
 resource "aws_instance" "web" {
-  ami           = var.ami
+  ami           = var.ami_id
   instance_type = var.instance_type
-  key_name      = var.key_name
   subnet_id     = var.subnet_id
+  key_name      = var.key_name
+  # Referencing the security group created within this module
   vpc_security_group_ids = [aws_security_group.instance_sg.id]
 
   tags = {
