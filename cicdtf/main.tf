@@ -81,18 +81,15 @@ module "ec2" {
 # Web Module (assuming it exists and you want it)
 # Add required inputs here if it needs any.
 # --------------------------
+# In your root cicdtf/main.tf
 module "web" {
-  source = "./modules/web"
-  # Example: If your web module needs the EC2 instance ID or IP
-  # instance_id = module.ec2.instance_id
-  # instance_public_ip = module.ec2.instance_public_ip
+  source             = "./modules/web"
+  ami_id             = data.aws_ami.amazon_linux_2.id # Or your desired AMI ID
+  instance_type      = "t2.micro" # Or your desired instance type
+  subnet_id          = module.vpc.public_subnet_id # Or your desired subnet ID
+  key_name           = aws_key_pair.deployer_key.key_name # Or your desired key name
+  instance_name      = "MyWebServer" # Or your desired instance name
 }
-# THIS IS LIKELY INSIDE modules/web/main.tf OR ANOTHER FILE IN THAT DIRECTORY
-module "some_nested_module" {
-  source = "./modules/..." # Relative path from modules/web/
-  # ...
-}
-
 # --------------------------
 # Outputs for convenience
 # --------------------------
